@@ -1,0 +1,40 @@
+{
+  "name": "@satoshipay/sep-6",
+  "version": "0.0.0",
+  "author": "SatoshiPay Ltd (https://satoshipay.io/)",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "precommit": "lint-staged",
+    "prepare": "npm run build",
+    "prettier": "prettier --write 'src/**.ts' *.md"
+  },
+  "peerDependencies": {
+    "stellar-sdk": "^0.11"
+  },
+  "devDependencies": {
+    "@types/stellar-sdk": "^0.11.1",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.4",
+    "prettier": "^1.16.4",
+    "tslint": "^5.12.1",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.3.3"
+  },
+  "lint-staged": {
+    "ignore": [
+      "**/*.yml"
+    ],
+    "linters": {
+      "*": [
+        "prettier --write",
+        "git add"
+      ]
+    }
+  },
+  "prettier": {
+    "semi": false
+  }
+}
