@@ -2,7 +2,7 @@
   "name": "@satoshipay/sep-6",
   "version": "0.0.0",
   "author": "SatoshiPay Ltd (https://satoshipay.io/)",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
