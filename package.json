@@ -7,11 +7,13 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "lint": "tslint --project .",
     "precommit": "lint-staged",
     "prepare": "npm run build",
     "prettier": "prettier --write 'src/**.ts' *.md",
     "test": "ava",
-    "posttest": "tslint --project ."
+    "test:ci": "ava-ts --tap | tap-xunit > ava.xml",
+    "posttest": "npm run lint"
   },
   "peerDependencies": {
     "stellar-sdk": "^0.11"
@@ -28,6 +30,7 @@
     "lint-staged": "^8.1.4",
     "prettier": "^1.16.4",
     "stellar-sdk": "^0.13.0",
+    "tap-xunit": "^2.3.0",
     "ts-node": "^8.0.2",
     "tslint": "^5.12.1",
     "tslint-config-prettier": "^1.18.0",
