@@ -1,5 +1,4 @@
 import axios from "axios"
-import { joinURL } from "./util"
 import {
   TransferInfo,
   WithdrawalKYCInteractiveResponse,
@@ -7,6 +6,7 @@ import {
   WithdrawalKYCStatusResponse,
   WithdrawalSuccessResponse
 } from "./responses"
+import { joinURL } from "./util"
 
 type WithdrawalKYCResponse =
   | WithdrawalKYCInteractiveResponse
@@ -14,16 +14,30 @@ type WithdrawalKYCResponse =
   | WithdrawalKYCStatusResponse
 
 export interface WithdrawalOptions {
-  /** The stellar account ID of the user that wants to do the withdrawal. This is only needed if the anchor requires KYC information for withdrawal. The anchor can use account to look up the user's KYC information. */
+  /**
+   * The stellar account ID of the user that wants to do the withdrawal.
+   * This is only needed if the anchor requires KYC information for withdrawal.
+   * The anchor can use account to look up the user's KYC information.
+   */
   account: string
 
-  /** The account that the user wants to withdraw their funds to. This can be a crypto account, a bank account number, IBAN, mobile number, or email address. */
+  /**
+   * The account that the user wants to withdraw their funds to.
+   * This can be a crypto account, a bank account number, IBAN, mobile number, or email address.
+   */
   dest: string
 
-  /** Extra information to specify withdrawal location. For crypto it may be a memo in addition to the dest address. It can also be a routing number for a bank, a BIC, or the name of a partner handling the withdrawal. */
+  /**
+   * Extra information to specify withdrawal location.
+   * For crypto it may be a memo in addition to the dest address.
+   * It can also be a routing number for a bank, a BIC, or the name of a partner handling the withdrawal.
+   */
   dest_extra: string
 
-  /** A wallet will send this to uniquely identify a user if the wallet has multiple users sharing one Stellar account. The anchor can use this along with account to look up the user's KYC info. */
+  /**
+   * A wallet will send this to uniquely identify a user if the wallet has multiple users sharing one Stellar account.
+   * The anchor can use this along with account to look up the user's KYC info.
+   */
   memo?: string
 
   /** Type of memo. One of text, id or hash */
@@ -51,13 +65,16 @@ export enum WithdrawalType {
   billPayment = "bill_payment"
 }
 
-export function TransferServer(serverURL: string) {
+export function TransferServer(serverURL: string, authToken?: string) {
+  const headers = {
+    Authorization: `Bearer ${authToken}`
+  }
   return {
     get url() {
       return serverURL
     },
     async fetchInfo(): Promise<TransferInfo> {
-      const response = await axios(joinURL(serverURL, "/info"))
+      const response = await axios(joinURL(serverURL, "/info"), { headers })
       return response.data
     },
     async withdraw(
@@ -73,7 +90,7 @@ export function TransferServer(serverURL: string) {
       const url = joinURL(serverURL, "/info")
       const validateStatus = (status: number) =>
         status === 200 || status === 403
-      const response = await axios(url, { params, validateStatus })
+      const response = await axios(url, { headers, params, validateStatus })
 
       if (response.status === 200) {
         return {

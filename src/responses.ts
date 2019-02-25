@@ -15,11 +15,22 @@ export interface TransferInfo {
     [assetCode: string]: {
       /** Set if SEP-6 deposit for this asset is supported. */
       enabled: boolean
-      /** Optional fixed (flat) fee for deposit. In units of the deposited asset. Blank if there is no fee or the fee schedule is complex. */
+      /**
+       * Optional fixed (flat) fee for deposit. In units of the deposited asset.
+       * Blank if there is no fee or the fee schedule is complex.
+       */
       fee_fixed?: number
-      /** Optional percentage fee for deposit. In percentage points. Blank if there is no fee or the fee schedule is complex. */
+      /**
+       * Optional percentage fee for deposit. In percentage points.
+       * Blank if there is no fee or the fee schedule is complex.
+       */
       fee_percent?: number
-      /** The fields object allows an anchor to describe fields that are passed into /deposit. It can explain standard fields like dest and dest_extra for withdrawal, and it can also specify extra fields that should be passed into /deposit such as an email address or bank name. Only fields that are passed to /deposit need appear here. */
+      /**
+       * The fields object allows an anchor to describe fields that are passed into /deposit.
+       * It can explain standard fields like dest and dest_extra for withdrawal, and it can also
+       * specify extra fields that should be passed into /deposit such as an email address or bank name.
+       * Only fields that are passed to /deposit need appear here.
+       */
       fields?: TransferFields
       /** Optional minimum amount. No limit if not specified. */
       min_amount?: number
@@ -31,18 +42,32 @@ export interface TransferInfo {
     [assetCode: string]: {
       /** Set if SEP-6 deposit for this asset is supported. */
       enabled: boolean
-      /** Optional fixed (flat) fee for withdraw. In units of the deposited asset. Blank if there is no fee or the fee schedule is complex. */
+      /**
+       * Optional fixed (flat) fee for withdraw. In units of the deposited asset.
+       * Blank if there is no fee or the fee schedule is complex.
+       */
       fee_fixed?: number
-      /** Optional percentage fee for withdraw. In percentage points. Blank if there is no fee or the fee schedule is complex. */
+      /**
+       * Optional percentage fee for withdraw. In percentage points.
+       * Blank if there is no fee or the fee schedule is complex.
+       */
       fee_percent?: number
       /** Optional minimum amount. No limit if not specified. */
       min_amount?: number
       /** Optional maximum amount. No limit if not specified. */
       max_amount?: number
-      /** Each type of withdrawal supported for that asset as a key. Each type can specify a fields object explaining what fields are needed and what they do. */
+      /**
+       * Each type of withdrawal supported for that asset as a key.
+       * Each type can specify a fields object explaining what fields are needed and what they do.
+       */
       types?: {
         [withdrawalMethod: string]: {
-          /** The fields object allows an anchor to describe fields that are passed into /withdraw. It can explain standard fields like dest and dest_extra for withdrawal, and it can also specify extra fields that should be passed into /withdraw such as an email address or bank name. Only fields that are passed to /withdraw need appear here. */
+          /**
+           * The fields object allows an anchor to describe fields that are passed into /withdraw.
+           * It can explain standard fields like dest and dest_extra for withdrawal, and it can also
+           * specify extra fields that should be passed into /withdraw such as an email address or bank name.
+           * Only fields that are passed to /withdraw need appear here.
+           */
           fields?: TransferFields
         }
       }
@@ -63,7 +88,11 @@ export interface TransferInfo {
 }
 
 export interface WithdrawalKYCInteractiveResponse {
-  /** Flag indicating that depositing is also handled in the anchor's interactive customer info flow. The wallet need not make additional requests to /deposit to complete the deposit. Defaults to false. Only relevant for responses to /deposit requests. */
+  /**
+   * Flag indicating that depositing is also handled in the anchor's interactive customer info flow.
+   * The wallet need not make additional requests to /deposit to complete the deposit.
+   * Defaults to false. Only relevant for responses to /deposit requests.
+   */
   interactive_deposit?: boolean
   /** URL hosted by the anchor. The wallet should show this URL to the user either as a popup or an iframe. */
   url: string
