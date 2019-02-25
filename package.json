@@ -42,6 +42,9 @@
       "ts-node/register"
     ]
   },
+  "files": [
+    "dist/"
+  ],
   "lint-staged": {
     "ignore": [
       "**/*.yml"
