@@ -8,6 +8,8 @@ import {
 } from "./responses"
 import { joinURL } from "./util"
 
+export { TransferInfo }
+
 type WithdrawalKYCResponse =
   | WithdrawalKYCInteractiveResponse
   | WithdrawalKYCNonInteractiveResponse
