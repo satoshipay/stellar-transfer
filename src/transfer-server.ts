@@ -70,9 +70,12 @@ export enum WithdrawalType {
 export type TransferServer = ReturnType<typeof TransferServer>
 
 export function TransferServer(serverURL: string, authToken?: string) {
-  const headers = {
-    Authorization: `Bearer ${authToken}`
+  const headers: any = {}
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`
   }
+
   return {
     get url() {
       return serverURL
