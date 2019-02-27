@@ -1,6 +1,6 @@
 import test from "ava"
 import { Asset, Server } from "stellar-sdk"
-import { fetchAssetTransferInfos } from "../src/index"
+import { fetchAssetTransferInfos, fetchTransferServers } from "../src/index"
 
 test("fetchAssetTransferInfos() works", async t => {
   const eurt = new Asset(
@@ -13,7 +13,8 @@ test("fetchAssetTransferInfos() works", async t => {
   )
 
   const horizon = new Server("https://horizon.stellar.org/")
-  const transferInfos = await fetchAssetTransferInfos(horizon, [eurt, shit])
+  const transferServers = await fetchTransferServers(horizon, [eurt, shit])
+  const transferInfos = await fetchAssetTransferInfos(transferServers)
 
   t.true(transferInfos.has(eurt))
   t.true(transferInfos.has(shit))

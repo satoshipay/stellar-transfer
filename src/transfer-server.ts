@@ -67,6 +67,8 @@ export enum WithdrawalType {
   billPayment = "bill_payment"
 }
 
+export type TransferServer = ReturnType<typeof TransferServer>
+
 export function TransferServer(serverURL: string, authToken?: string) {
   const headers = {
     Authorization: `Bearer ${authToken}`
