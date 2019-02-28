@@ -25,16 +25,26 @@ async function map<K, V>(
   inputs: K[],
   mapper: (input: K) => MaybeAsync<V | undefined>
 ): Promise<Map<K, NoUndefined<V>>> {
-  const results = new Map<K, NoUndefined<V>>()
+  const unorderedMap = new Map<K, NoUndefined<V>>()
   await Promise.all(
     inputs.map(async input => {
       const mapped = await mapper(input)
       if (typeof mapped !== "undefined") {
-        results.set(input, mapped as NoUndefined<V>)
+        unorderedMap.set(input, mapped as NoUndefined<V>)
       }
     })
   )
-  return results
+
+  // Now restore order of items by iterating synchronously
+  // Important, since some of that data is used for form building
+
+  const orderedMap = new Map<K, NoUndefined<V>>()
+  for (const input of Array.from(unorderedMap.keys())) {
+    if (unorderedMap.has(input)) {
+      orderedMap.set(input, unorderedMap.get(input) as NoUndefined<V>)
+    }
+  }
+  return orderedMap
 }
 
 export async function fetchTransferServers(
