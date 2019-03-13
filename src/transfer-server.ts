@@ -94,7 +94,7 @@ export function TransferServer(serverURL: string, authToken?: string) {
         type,
         asset_code: assetCode
       }
-      const url = joinURL(serverURL, "/info")
+      const url = joinURL(serverURL, "/withdraw")
       const validateStatus = (status: number) =>
         status === 200 || status === 403
       const response = await axios(url, { headers, params, validateStatus })
