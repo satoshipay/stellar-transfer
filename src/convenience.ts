@@ -1,4 +1,5 @@
 import { Asset, Server } from "stellar-sdk"
+import { debug } from "./logger"
 import { fetchTransferServerURL } from "./resolver"
 import { TransferInfo, TransferServer } from "./transfer-server"
 
@@ -57,14 +58,27 @@ export async function fetchTransferServers(
     }
   }
 
+  const fetchErrors: Error[] = []
+
   const issuers = dedupe(assets.map(asset => asset.getIssuer()))
   const transferServerURLsByIssuer = await map(
     issuers,
     async issuerAccountID => {
-      const url = await fetchTransferServerURL(horizon, issuerAccountID)
-      return url || undefined
+      try {
+        const url = await fetchTransferServerURL(horizon, issuerAccountID)
+        return url || undefined
+      } catch (error) {
+        fetchErrors.push(error)
+        return undefined
+      }
     }
   )
+
+  if (fetchErrors.length > 0 && fetchErrors.length === issuers.length) {
+    // Ignore single failing transfer servers when there are multiple
+    debug("Transfer server URLs could not be fetched:", fetchErrors)
+    throw fetchErrors[0]
+  }
 
   return map(assets, asset => {
     const url = transferServerURLsByIssuer.get(asset.getIssuer())
@@ -88,11 +102,27 @@ export async function fetchAssetTransferInfos(
       .map(server => server.url)
   )
 
+  const fetchErrors: Error[] = []
+
   // Important to keep the fetchInfo() as a separate step,
   // so we fetch once per server, not once per asset
   const transferServerInfosByURL = await map(transferServerURLs, url =>
-    TransferServer(url).fetchInfo()
+    TransferServer(url)
+      .fetchInfo()
+      .catch(error => {
+        fetchErrors.push(error)
+        return null
+      })
   )
+
+  if (
+    fetchErrors.length > 0 &&
+    fetchErrors.length === transferServerURLs.length
+  ) {
+    // Ignore single failing transfer servers when there are multiple
+    debug("Transfer server information could not be fetched:", fetchErrors)
+    throw fetchErrors[0]
+  }
 
   return map(assets, async asset => {
     const transferServer = transferServers.get(asset)
