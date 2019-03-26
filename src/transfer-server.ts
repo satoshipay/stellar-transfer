@@ -96,7 +96,7 @@ export function TransferServer(serverURL: string, authToken?: string) {
       }
       const url = joinURL(serverURL, "/withdraw")
       const validateStatus = (status: number) =>
-        status === 200 || status === 403
+        status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
       const response = await axios(url, { headers, params, validateStatus })
 
       if (response.status === 200) {
@@ -109,9 +109,15 @@ export function TransferServer(serverURL: string, authToken?: string) {
           data: response.data as WithdrawalKYCResponse,
           type: "kyc"
         }
+      } else if (response.data && response.data.message) {
+        throw Error(
+          `Anchor responded with status code ${response.status}: ${
+            response.data.message
+          }`
+        )
       } else {
         throw Error(
-          `Unexpected response code returned by GET ${url}: ${response.status}`
+          `Anchor responded with unexpected status code: ${response.status}`
         )
       }
     }
