@@ -3,6 +3,7 @@ import { debug } from "./logger"
 import { fetchTransferServerURL } from "./resolver"
 import { TransferInfo, TransferServer } from "./transfer-server"
 
+type Deasync<T> = T extends Promise<infer BaseType> ? BaseType : T
 type MaybeAsync<T> = T | Promise<T>
 type NoUndefined<T> = T extends (infer X | undefined) ? X : T
 
@@ -25,13 +26,15 @@ const dedupe = <T>(array: T[]): T[] => Array.from(new Set(array))
 async function map<K, V>(
   inputs: K[],
   mapper: (input: K) => MaybeAsync<V | undefined>
-): Promise<Map<K, NoUndefined<V>>> {
-  const unorderedMap = new Map<K, NoUndefined<V>>()
+): Promise<Map<K, Deasync<NoUndefined<V>>>> {
+  type NormalizedValue = Deasync<NoUndefined<V>>
+
+  const unorderedMap = new Map<K, NormalizedValue>()
   await Promise.all(
     inputs.map(async input => {
       const mapped = await mapper(input)
       if (typeof mapped !== "undefined") {
-        unorderedMap.set(input, mapped as NoUndefined<V>)
+        unorderedMap.set(input, mapped as NormalizedValue)
       }
     })
   )
@@ -39,10 +42,10 @@ async function map<K, V>(
   // Now restore order of items by iterating synchronously
   // Important, since some of that data is used for form building
 
-  const orderedMap = new Map<K, NoUndefined<V>>()
+  const orderedMap = new Map<K, NormalizedValue>()
   for (const input of Array.from(unorderedMap.keys())) {
     if (unorderedMap.has(input)) {
-      orderedMap.set(input, unorderedMap.get(input) as NoUndefined<V>)
+      orderedMap.set(input, unorderedMap.get(input) as NormalizedValue)
     }
   }
   return orderedMap
