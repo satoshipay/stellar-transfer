@@ -69,31 +69,32 @@ export enum WithdrawalType {
 
 export type TransferServer = ReturnType<typeof TransferServer>
 
-export function TransferServer(serverURL: string, authToken?: string) {
-  const headers: any = {}
-
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`
-  }
-
+export function TransferServer(serverURL: string) {
   return {
     get url() {
       return serverURL
     },
     async fetchInfo(): Promise<TransferInfo> {
-      const response = await axios(joinURL(serverURL, "/info"), { headers })
+      const response = await axios(joinURL(serverURL, "/info"))
       return response.data
     },
     async withdraw(
       type: WithdrawalType | string,
       assetCode: string,
+      authToken: string | null | undefined,
       options: WithdrawalOptions
     ): Promise<WithdrawalRequestSuccess | WithdrawalRequestKYC> {
+      const headers: any = {}
       const params = {
         ...options,
         type,
         asset_code: assetCode
       }
+
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`
+      }
+
       const url = joinURL(serverURL, "/withdraw")
       const validateStatus = (status: number) =>
         status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
