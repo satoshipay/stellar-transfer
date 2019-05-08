@@ -4,6 +4,8 @@
 
 That means that users can send EURT to the anchor, requesting a payout in fiat EUR to their SEPA account via bank transfer, for instance.
 
+**Note: This package is still considered experimental. Breaking changes should be expected.**
+
 ## Installation
 
 ```
