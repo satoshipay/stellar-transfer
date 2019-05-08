@@ -26,7 +26,7 @@ yarn add @satoshipay/stellar-sep-6
 ### Look up an anchor's transfer server
 
 ```ts
-import { fetchTransferServerURL } from "@satoshipay/sep-6"
+import { fetchTransferServerURL } from "@satoshipay/stellar-sep-6"
 import { Server } from "stellar-sdk"
 
 const horizon = new Server("https://stellar-horizon.satoshipay.io/")
@@ -41,7 +41,7 @@ const transferServerURL: string | null = await fetchTransferServerURL(
 ### Fetch transfer server metadata
 
 ```ts
-import { TransferServer } from "@satoshipay/sep-6"
+import { TransferServer } from "@satoshipay/stellar-sep-6"
 
 const transferServer = TransferServer(transferServerURL)
 const info = await transferServer.fetchInfo()
@@ -50,7 +50,7 @@ const info = await transferServer.fetchInfo()
 ### Request a withdrawal
 
 ```ts
-import { TransferServer } from "@satoshipay/sep-6"
+import { TransferServer } from "@satoshipay/stellar-sep-6"
 import { Keypair } from "stellar-sdk"
 
 const myKeypair = Keypair.fromSecret("S...")
@@ -93,7 +93,7 @@ import {
   fetchAssetTransferInfos,
   fetchTransferServers,
   TransferInfo
-} from "@satoshipay/sep-6"
+} from "@satoshipay/stellar-sep-6"
 import { Asset, Server } from "stellar-sdk"
 
 const assets = [
