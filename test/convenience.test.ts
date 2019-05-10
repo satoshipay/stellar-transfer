@@ -12,8 +12,10 @@ test("fetchAssetTransferInfos() works", async t => {
     "GDOOMATUOJPLIQMQ4WWXBEWR5UMKJW65CFKJJW3LV7XZYIEQHZPDQCBI"
   )
 
-  const horizon = new Server("https://horizon.stellar.org/")
-  const transferServers = await fetchTransferServers(horizon, [eurt, shit])
+  const transferServers = await fetchTransferServers(
+    "https://horizon.stellar.org/",
+    [eurt, shit]
+  )
   const transferInfos = await fetchAssetTransferInfos(transferServers)
 
   t.true(transferInfos.has(eurt))

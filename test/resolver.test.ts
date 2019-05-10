@@ -1,11 +1,9 @@
 import test from "ava"
-import { Server } from "stellar-sdk"
 import { fetchTransferServerURL } from "../src/index"
 
 test("fetchTransferServerURL() can fetch the TEMPO transfer server", async t => {
-  const horizon = new Server("https://horizon.stellar.org/")
   const transferServerURL = await fetchTransferServerURL(
-    horizon,
+    "https://horizon.stellar.org/",
     "GAP5LETOV6YIE62YAM56STDANPRDO7ZFDBGSNHJQIYGGKSMOZAHOOS2S"
   )
 
