@@ -12,9 +12,10 @@ export function getTransferServerURL(
 }
 
 export async function fetchTransferServerURL(
-  horizon: Server,
+  horizonURL: string,
   issuerAccountID: string
 ): Promise<string | null> {
+  const horizon = new Server(horizonURL)
   const account = await horizon.loadAccount(issuerAccountID)
   const domainName = (account as any).home_domain
 

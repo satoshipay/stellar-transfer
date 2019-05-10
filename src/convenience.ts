@@ -1,9 +1,8 @@
-import { Asset, Server } from "stellar-sdk"
+import { Asset } from "stellar-sdk"
 import { debug } from "./logger"
 import { fetchTransferServerURL } from "./resolver"
 import { TransferInfo, TransferServer } from "./transfer-server"
 
-type Deasync<T> = T extends Promise<infer BaseType> ? BaseType : T
 type MaybeAsync<T> = T | Promise<T>
 type NoUndefined<T> = T extends (infer X | undefined) ? X : T
 
@@ -26,8 +25,8 @@ const dedupe = <T>(array: T[]): T[] => Array.from(new Set(array))
 async function map<K, V>(
   inputs: K[],
   mapper: (input: K) => MaybeAsync<V | undefined>
-): Promise<Map<K, Deasync<NoUndefined<V>>>> {
-  type NormalizedValue = Deasync<NoUndefined<V>>
+): Promise<Map<K, NoUndefined<V>>> {
+  type NormalizedValue = NoUndefined<V>
 
   const unorderedMap = new Map<K, NormalizedValue>()
   await Promise.all(
@@ -52,7 +51,7 @@ async function map<K, V>(
 }
 
 export async function fetchTransferServers(
-  horizon: Server,
+  horizonURL: string,
   assets: Asset[]
 ): Promise<AssetTransferServerCache> {
   for (const asset of assets) {
@@ -68,7 +67,7 @@ export async function fetchTransferServers(
     issuers,
     async issuerAccountID => {
       try {
-        const url = await fetchTransferServerURL(horizon, issuerAccountID)
+        const url = await fetchTransferServerURL(horizonURL, issuerAccountID)
         return url || undefined
       } catch (error) {
         fetchErrors.push(error)
@@ -109,13 +108,15 @@ export async function fetchAssetTransferInfos(
 
   // Important to keep the fetchInfo() as a separate step,
   // so we fetch once per server, not once per asset
-  const transferServerInfosByURL = await map(transferServerURLs, url =>
-    TransferServer(url)
-      .fetchInfo()
-      .catch(error => {
-        fetchErrors.push(error)
-        return null
-      })
+  const transferServerInfosByURL = await map<string, TransferInfo | null>(
+    transferServerURLs,
+    url =>
+      TransferServer(url)
+        .fetchInfo()
+        .catch(error => {
+          fetchErrors.push(error)
+          return null
+        })
   )
 
   if (
@@ -127,24 +128,27 @@ export async function fetchAssetTransferInfos(
     throw fetchErrors[0]
   }
 
-  return map(assets, async asset => {
-    const transferServer = transferServers.get(asset)
+  return map<Asset, AssetTransferInfo | EmptyAssetTransferInfo>(
+    assets,
+    async asset => {
+      const transferServer = transferServers.get(asset)
 
-    const transferInfo = transferServer
-      ? transferServerInfosByURL.get(transferServer.url)
-      : null
+      const transferInfo = transferServer
+        ? transferServerInfosByURL.get(transferServer.url)
+        : null
 
-    if (!transferInfo) {
+      if (!transferInfo) {
+        return {
+          deposit: undefined,
+          transferInfo: undefined,
+          withdraw: undefined
+        }
+      }
       return {
-        deposit: undefined,
-        transferInfo: undefined,
-        withdraw: undefined
+        transferInfo,
+        deposit: transferInfo.deposit[asset.getCode()],
+        withdraw: transferInfo.withdraw[asset.getCode()]
       }
     }
-    return {
-      transferInfo,
-      deposit: transferInfo.deposit[asset.getCode()],
-      withdraw: transferInfo.withdraw[asset.getCode()]
-    }
-  })
+  )
 }
