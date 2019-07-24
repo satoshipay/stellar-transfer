@@ -87,7 +87,7 @@ export interface TransferInfo {
   }
 }
 
-export interface WithdrawalKYCInteractiveResponse {
+export interface KYCInteractiveResponse {
   /**
    * Flag indicating that depositing is also handled in the anchor's interactive customer info flow.
    * The wallet need not make additional requests to /deposit to complete the deposit.
@@ -99,13 +99,13 @@ export interface WithdrawalKYCInteractiveResponse {
   type: "interactive_customer_info_needed"
 }
 
-export interface WithdrawalKYCNonInteractiveResponse {
+export interface KYCNonInteractiveResponse {
   /** A list of field names that need to be transmitted via SEP-12 for the deposit to proceed. */
   fields: string[]
   type: "non_interactive_customer_info_needed"
 }
 
-export interface WithdrawalKYCStatusResponse<
+export interface KYCStatusResponse<
   Status extends "pending" | "denied" = "pending" | "denied"
 > {
   /** Estimated number of seconds until the deposit status will update. */

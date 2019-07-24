@@ -2,9 +2,9 @@
 import { WebauthData } from "@satoshipay/stellar-sep-10"
 import { Asset, Transaction } from "stellar-sdk"
 import {
+  KYCInteractiveResponse,
+  KYCStatusResponse,
   TransferServer,
-  WithdrawalKYCInteractiveResponse,
-  WithdrawalKYCStatusResponse,
   WithdrawalSuccessResponse
 } from "./index"
 
@@ -35,19 +35,19 @@ export interface AfterWebauthState {
 export interface BeforeInteractiveState {
   step: "before-interactive-kyc"
   details: GeneralWithdrawalDetails
-  kyc: WithdrawalKYCInteractiveResponse
+  kyc: KYCInteractiveResponse
 }
 
 export interface PendingKYCState {
   step: "pending-kyc"
   details: GeneralWithdrawalDetails
-  kycStatus: WithdrawalKYCStatusResponse<"pending">
+  kycStatus: KYCStatusResponse<"pending">
 }
 
 export interface AfterDeniedKYCState {
   step: "after-denied-kyc"
   details: GeneralWithdrawalDetails
-  rejection: WithdrawalKYCStatusResponse<"denied">
+  rejection: KYCStatusResponse<"denied">
 }
 
 export interface AfterSuccessfulKYC {
@@ -98,19 +98,19 @@ const setAuthToken = (token: string | undefined) =>
     token
   } as const)
 
-const startInteractiveKYC = (response: WithdrawalKYCInteractiveResponse) =>
+const startInteractiveKYC = (response: KYCInteractiveResponse) =>
   ({
     type: "start-interactive-kyc",
     response
   } as const)
 
-const pendingKYC = (response: WithdrawalKYCStatusResponse<"pending">) =>
+const pendingKYC = (response: KYCStatusResponse<"pending">) =>
   ({
     type: "kyc-pending",
     response
   } as const)
 
-const failedKYC = (response: WithdrawalKYCStatusResponse<"denied">) =>
+const failedKYC = (response: KYCStatusResponse<"denied">) =>
   ({
     type: "kyc-denied",
     response

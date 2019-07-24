@@ -1,9 +1,9 @@
 import axios from "axios"
 import {
+  KYCInteractiveResponse,
+  KYCNonInteractiveResponse,
+  KYCStatusResponse,
   TransferInfo,
-  WithdrawalKYCInteractiveResponse,
-  WithdrawalKYCNonInteractiveResponse,
-  WithdrawalKYCStatusResponse,
   WithdrawalSuccessResponse
 } from "./responses"
 import { joinURL } from "./util"
@@ -11,9 +11,9 @@ import { joinURL } from "./util"
 export { TransferInfo }
 
 type WithdrawalKYCResponse =
-  | WithdrawalKYCInteractiveResponse
-  | WithdrawalKYCNonInteractiveResponse
-  | WithdrawalKYCStatusResponse
+  | KYCInteractiveResponse
+  | KYCNonInteractiveResponse
+  | KYCStatusResponse
 
 export interface WithdrawalOptions {
   /**
@@ -52,10 +52,7 @@ export interface WithdrawalRequestSuccess {
 }
 
 export interface WithdrawalRequestKYC {
-  data:
-    | WithdrawalKYCInteractiveResponse
-    | WithdrawalKYCNonInteractiveResponse
-    | WithdrawalKYCStatusResponse
+  data: KYCInteractiveResponse | KYCNonInteractiveResponse | KYCStatusResponse
   type: "kyc"
 }
 
