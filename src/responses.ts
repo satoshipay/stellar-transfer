@@ -13,6 +13,8 @@ export interface TransferFields {
 export interface TransferInfo {
   deposit: {
     [assetCode: string]: {
+      /** Optional. `true` if client must be authenticated before accessing the deposit endpoint for this asset. `false` if not specified. */
+      authentication_required?: boolean
       /** Set if SEP-6 deposit for this asset is supported. */
       enabled: boolean
       /**
@@ -40,6 +42,8 @@ export interface TransferInfo {
   }
   withdraw: {
     [assetCode: string]: {
+      /** Optional. `true` if client must be authenticated before accessing the deposit endpoint for this asset. `false` if not specified. */
+      authentication_required?: boolean
       /** Set if SEP-6 deposit for this asset is supported. */
       enabled: boolean
       /**
