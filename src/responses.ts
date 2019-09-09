@@ -92,6 +92,8 @@ export interface TransferInfo {
 }
 
 export interface WithdrawalKYCInteractiveResponse {
+  /** The anchor's internal ID for this deposit / withdrawal request. Can be passed to the `/transaction` endpoint to check status of the request. */
+  id?: string
   /**
    * Flag indicating that depositing is also handled in the anchor's interactive customer info flow.
    * The wallet need not make additional requests to /deposit to complete the deposit.
