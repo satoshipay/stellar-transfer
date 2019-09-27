@@ -44,6 +44,12 @@ export interface WithdrawalOptions {
 
   /** Type of memo. One of text, id or hash */
   memo_type?: "hash" | "id" | "text"
+
+  /** In communications / pages about the withdrawal, anchor should display the wallet name to the user to explain where funds are coming from. */
+  wallet_name?: string
+
+  /** Anchor can show this to the user when referencing the wallet involved in the withdrawal (ex. in the anchor's transaction history) */
+  wallet_url?: string
 }
 
 export interface WithdrawalRequestSuccess {

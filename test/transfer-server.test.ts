@@ -1,8 +1,8 @@
 import test from "ava"
 import { TransferServer } from "../src/index"
 
-test("fetchTransferServerURL() can fetch the TEMPO transfer server", async t => {
-  const transferServer = TransferServer("https://api.tempo.eu.com/t1")
+test("fetchTransferServerURL() can fetch the AnchorUSD transfer server", async t => {
+  const transferServer = TransferServer("https://api.anchorusd.com/transfer/")
   const transferInfo = await transferServer.fetchInfo()
 
   t.true(transferInfo && typeof transferInfo === "object")
@@ -22,6 +22,6 @@ test("fetchTransferServerURL() can fetch the TEMPO transfer server", async t => 
       2
     )}`
   )
-  t.true("EURT" in transferInfo.deposit)
-  t.true("EURT" in transferInfo.withdraw)
+  t.true("USD" in transferInfo.deposit)
+  t.true("USD" in transferInfo.withdraw)
 })
