@@ -1,11 +1,11 @@
 import test from "ava"
 import { fetchTransferServerURL } from "../src/index"
 
-test("fetchTransferServerURL() can fetch the TEMPO transfer server", async t => {
+test("fetchTransferServerURL() can fetch the AnchorUSD transfer server", async t => {
   const transferServerURL = await fetchTransferServerURL(
     "https://horizon.stellar.org/",
-    "GAP5LETOV6YIE62YAM56STDANPRDO7ZFDBGSNHJQIYGGKSMOZAHOOS2S"
+    "GDUKMGUGDZQK6YHYA5Z6AY2G4XDSZPSZ3SW5UN3ARVMO6QSRDWP5YLEX"
   )
 
-  t.is(transferServerURL, "https://api.tempo.eu.com/t1")
+  t.is(transferServerURL, "https://api.anchorusd.com/transfer/")
 })
