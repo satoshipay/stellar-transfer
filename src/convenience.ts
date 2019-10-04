@@ -1,7 +1,10 @@
-import { Asset } from "stellar-sdk"
+import { Asset, Server } from "stellar-sdk"
 import { debug } from "./logger"
-import { fetchTransferServerURL } from "./resolver"
-import { TransferInfo, TransferServer } from "./transfer-server"
+import {
+  locateTransferServer,
+  TransferInfo,
+  TransferServer
+} from "./transfer-server"
 
 type MaybeAsync<T> = T | Promise<T>
 type NoUndefined<T> = T extends (infer X | undefined) ? X : T
@@ -51,7 +54,7 @@ async function map<K, V>(
 }
 
 export async function fetchTransferServers(
-  horizonURL: string,
+  horizon: Server,
   assets: Asset[]
 ): Promise<AssetTransferServerCache> {
   for (const asset of assets) {
@@ -67,7 +70,11 @@ export async function fetchTransferServers(
     issuers,
     async issuerAccountID => {
       try {
-        const url = await fetchTransferServerURL(horizonURL, issuerAccountID)
+        const accountData = await horizon.loadAccount(issuerAccountID)
+        const homeDomain: string | undefined = (accountData as any).home_domain
+        const url = homeDomain
+          ? await locateTransferServer(homeDomain)
+          : undefined
         return url || undefined
       } catch (error) {
         fetchErrors.push(error)
