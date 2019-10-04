@@ -26,15 +26,11 @@ yarn add @satoshipay/stellar-sep-6
 ### Look up an anchor's transfer server
 
 ```ts
-import { fetchTransferServerURL } from "@satoshipay/stellar-sep-6"
+import { locateTransferServer } from "@satoshipay/stellar-sep-6"
 import { Server } from "stellar-sdk"
 
-const horizon = new Server("https://stellar-horizon.satoshipay.io/")
-const eurtIssuer = "GAP5LETOV6YIE62YAM56STDANPRDO7ZFDBGSNHJQIYGGKSMOZAHOOS2S"
-
-const transferServerURL: string | null = await fetchTransferServerURL(
-  horizon,
-  eurtIssuer
+const transferServerURL: string | null = await locateTransferServer(
+  "www.anchorusd.com"
 )
 ```
 
@@ -50,13 +46,13 @@ const info = await transferServer.fetchInfo()
 ### Request a withdrawal
 
 ```ts
-import { TransferServer } from "@satoshipay/stellar-sep-6"
+import { withdraw, TransferServer } from "@satoshipay/stellar-sep-6"
 import { Keypair } from "stellar-sdk"
 
 const myKeypair = Keypair.fromSecret("S...")
 const transferServer = TransferServer(transferServerURL)
 
-const result = await transferServer.withdraw("bank_account", "EURT", {
+const result = await withdraw(transferServer, "bank_account", "EURT", {
   account: myKeypair.publicKey(),
 
   // The `fetchInfo()` result describes what needs to be passed here
