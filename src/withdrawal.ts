@@ -1,14 +1,69 @@
 import axios from "axios"
-import {
-  WithdrawalKYCInteractiveResponse,
-  WithdrawalKYCNonInteractiveResponse,
-  WithdrawalKYCStatusResponse,
-  WithdrawalSuccessResponse
-} from "./responses"
 import { TransferServer } from "./transfer-server"
 import { joinURL } from "./util"
 
-type WithdrawalKYCResponse =
+export interface WithdrawalKYCInteractiveResponse {
+  /** The anchor's internal ID for this deposit / withdrawal request. Can be passed to the `/transaction` endpoint to check status of the request. */
+  id?: string
+  /**
+   * Flag indicating that depositing is also handled in the anchor's interactive customer info flow.
+   * The wallet need not make additional requests to /deposit to complete the deposit.
+   * Defaults to false. Only relevant for responses to /deposit requests.
+   */
+  interactive_deposit?: boolean
+  /** URL hosted by the anchor. The wallet should show this URL to the user either as a popup or an iframe. */
+  url: string
+  type: "interactive_customer_info_needed"
+}
+
+export interface WithdrawalKYCNonInteractiveResponse {
+  /** A list of field names that need to be transmitted via SEP-12 for the deposit to proceed. */
+  fields: string[]
+  type: "non_interactive_customer_info_needed"
+}
+
+export interface WithdrawalKYCStatusResponse<
+  Status extends "pending" | "denied" = "pending" | "denied"
+> {
+  /** Estimated number of seconds until the deposit status will update. */
+  eta?: number
+  /** A URL the user can visit if they want more information about their account / status. */
+  more_info_url?: string
+  /** Status of customer information processing. */
+  status: Status
+  type: "customer_info_status"
+}
+
+export interface WithdrawalSuccessResponse {
+  /** The account the user should send its token back to. */
+  account_id: string
+
+  /** Type of memo to attach to transaction, one of text, id or hash. */
+  memo_type?: "hash" | "id" | "text"
+
+  /** Value of memo to attach to transaction, for hash this should be base64-encoded. */
+  memo?: string
+
+  /** Estimate of how long the withdrawal will take to credit in seconds. */
+  eta?: number
+
+  /** Minimum amount of an asset that a user can withdraw. */
+  min_amount?: number
+
+  /** Maximum amount of asset that a user can withdraw. */
+  max_amount?: number
+
+  /** If there is a fee for withdraw. In units of the withdrawn asset. */
+  fee_fixed?: number
+
+  /** If there is a percent fee for withdraw. */
+  fee_percent?: number
+
+  /** Any additional data needed as an input for this withdraw, example: Bank Name */
+  extra_info?: any
+}
+
+export type WithdrawalKYCResponse =
   | WithdrawalKYCInteractiveResponse
   | WithdrawalKYCNonInteractiveResponse
   | WithdrawalKYCStatusResponse
