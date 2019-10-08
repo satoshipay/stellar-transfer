@@ -84,14 +84,23 @@ export interface TransferInfo {
   fee?: {
     /** Indicates that the optional /fee endpoint is supported. */
     enabled: boolean
+
+    /** Optional. `true` if client must be authenticated before accessing the deposit endpoint for this asset. `false` if not specified. */
+    authentication_required?: boolean
   }
   transaction?: {
     /** Indicates that the optional /transaction endpoint is supported. */
     enabled: boolean
+
+    /** Optional. `true` if client must be authenticated before accessing the deposit endpoint for this asset. `false` if not specified. */
+    authentication_required?: boolean
   }
   transactions?: {
     /** Indicates that the optional /transactions endpoint is supported. */
     enabled: boolean
+
+    /** Optional. `true` if client must be authenticated before accessing the deposit endpoint for this asset. `false` if not specified. */
+    authentication_required?: boolean
   }
 }
 

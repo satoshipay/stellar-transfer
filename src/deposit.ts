@@ -8,15 +8,12 @@ import {
 import { TransferServer } from "./transfer-server"
 import { joinURL } from "./util"
 
-export interface WithdrawalSuccessResponse {
-  /** The account the user should send its token back to. */
-  account_id: string
-
-  /** Type of memo to attach to transaction, one of text, id or hash. */
-  memo_type?: "hash" | "id" | "text"
-
-  /** Value of memo to attach to transaction, for hash this should be base64-encoded. */
-  memo?: string
+export interface DepositSuccessResponse {
+  /**
+   * Terse but complete instructions for how to deposit the asset.
+   * In the case of most cryptocurrencies it is just an address to which the deposit should be sent.
+   */
+  how: string
 
   /** Estimate of how long the withdrawal will take to credit in seconds. */
   eta?: number
@@ -40,36 +37,26 @@ export interface WithdrawalSuccessResponse {
   }
 }
 
-export interface WithdrawalRequestSuccess {
-  data: WithdrawalSuccessResponse
+export interface DepositRequestSuccess {
+  data: DepositSuccessResponse
   type: "success"
 }
 
-export interface WithdrawalRequestKYC {
+export interface DepositRequestKYC {
   data: KYCInteractiveResponse | KYCNonInteractiveResponse | KYCStatusResponse
   type: "kyc"
 }
 
-export interface WithdrawalOptions {
+export interface DepositOptions {
   /**
-   * The stellar account ID of the user that wants to do the withdrawal.
-   * This is only needed if the anchor requires KYC information for withdrawal.
+   * The stellar account ID of the user that wants to do the deposit.
+   * This is only needed if the anchor requires KYC information for depositing.
    * The anchor can use account to look up the user's KYC information.
    */
   account: string
 
-  /**
-   * The account that the user wants to withdraw their funds to.
-   * This can be a crypto account, a bank account number, IBAN, mobile number, or email address.
-   */
-  dest?: string
-
-  /**
-   * Extra information to specify withdrawal location.
-   * For crypto it may be a memo in addition to the dest address.
-   * It can also be a routing number for a bank, a BIC, or the name of a partner handling the withdrawal.
-   */
-  dest_extra?: string
+  /** Email address of depositor. If desired, an anchor can use this to send email updates to the user about the deposit. */
+  email_address?: string
 
   /** Defaults to `en`. Language code specified using ISO 639-1. `error` fields in the response should be in this language. */
   lang?: string
@@ -83,28 +70,25 @@ export interface WithdrawalOptions {
   /** Type of memo. One of text, id or hash */
   memo_type?: "hash" | "id" | "text"
 
-  /** In communications / pages about the withdrawal, anchor should display the wallet name to the user to explain where funds are coming from. */
+  /** In communications / pages about the deposit, anchor should display the wallet name to the user to explain where funds are coming from. */
   wallet_name?: string
 
-  /** Anchor can show this to the user when referencing the wallet involved in the withdrawal (ex. in the anchor's transaction history) */
+  /** Anchor can show this to the user when referencing the wallet involved in the deposit (ex. in the anchor's transaction history) */
   wallet_url?: string
 }
 
-export enum WithdrawalType {
-  bankAccount = "bank_account",
-  cash = "cash",
-  crypto = "crypto",
-  mobile = "mobile",
-  billPayment = "bill_payment"
+export enum DepositType {
+  SEPA = "SEPA",
+  SWIFT = "SWIFT"
 }
 
-export async function withdraw(
+export async function deposit(
   transferServer: TransferServer,
-  type: WithdrawalType | string,
+  type: DepositType | string,
   assetCode: string,
   authToken: string | null | undefined,
-  options: WithdrawalOptions
-): Promise<WithdrawalRequestSuccess | WithdrawalRequestKYC> {
+  options: DepositOptions
+): Promise<DepositRequestSuccess | DepositRequestKYC> {
   const headers: any = {
     Authorization: authToken ? `Bearer ${authToken}` : undefined
   }
@@ -115,14 +99,14 @@ export async function withdraw(
     asset_code: assetCode
   }
 
-  const url = joinURL(transferServer.url, "/withdraw")
+  const url = joinURL(transferServer.url, "/deposit")
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
   const response = await axios(url, { headers, params, validateStatus })
 
   if (response.status === 200) {
     return {
-      data: response.data as WithdrawalSuccessResponse,
+      data: response.data as DepositSuccessResponse,
       type: "success"
     }
   } else if (response.status === 403) {

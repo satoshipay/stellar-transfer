@@ -1,3 +1,5 @@
 export * from "./convenience"
+export * from "./deposit"
+export * from "./kyc"
 export * from "./transfer-server"
 export * from "./withdrawal"
