@@ -100,8 +100,10 @@ export async function withdraw(
   authToken: string | null | undefined,
   options: WithdrawalOptions
 ): Promise<WithdrawalRequestSuccess | WithdrawalRequestKYC> {
-  const headers: any = {
-    Authorization: authToken ? `Bearer ${authToken}` : undefined
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
   }
 
   const params = {

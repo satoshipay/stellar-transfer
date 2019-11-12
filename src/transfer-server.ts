@@ -129,8 +129,15 @@ export function TransferServer(serverURL: string) {
     },
     async fetchTransaction(
       id: string,
-      idType: "transfer" | "stellar" | "external" = "transfer"
+      idType: "transfer" | "stellar" | "external" = "transfer",
+      authToken?: string
     ): Promise<{ transaction: DepositTransaction | WithdrawalTransaction }> {
+      const headers: any = {}
+
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`
+      }
+
       const idParamName =
         idType === "stellar"
           ? "stellar_transaction_id"
@@ -139,17 +146,27 @@ export function TransferServer(serverURL: string) {
           : "id"
 
       const response = await axios(joinURL(serverURL, "/transaction"), {
+        headers,
         params: { [idParamName]: id }
       })
       return response.data
     },
+
     async fetchTransactions(
       assetCode: string,
+      authToken?: string,
       options: FetchTransactionsOptions = {}
     ): Promise<{
       transactions: Array<DepositTransaction | WithdrawalTransaction>
     }> {
+      const headers: any = {}
+
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`
+      }
+
       const response = await axios(joinURL(serverURL, "/transactions"), {
+        headers,
         params: {
           asset_code: assetCode,
           kind: options.kind,

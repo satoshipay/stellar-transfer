@@ -84,8 +84,10 @@ export async function deposit(
   authToken: string | null | undefined,
   options: DepositOptions
 ): Promise<DepositRequestSuccess | DepositRequestKYC> {
-  const headers: any = {
-    Authorization: authToken ? `Bearer ${authToken}` : undefined
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
   }
 
   const params = {
