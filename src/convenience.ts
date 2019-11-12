@@ -3,6 +3,7 @@ import { debug } from "./logger"
 import {
   locateTransferServer,
   TransferInfo,
+  TransferOptions,
   TransferServer
 } from "./transfer-server"
 
@@ -55,7 +56,8 @@ async function map<K, V>(
 
 export async function fetchTransferServers(
   horizon: Server,
-  assets: Asset[]
+  assets: Asset[],
+  transferOptions?: TransferOptions
 ): Promise<AssetTransferServerCache> {
   for (const asset of assets) {
     if (asset.isNative()) {
@@ -95,7 +97,7 @@ export async function fetchTransferServers(
       return null
     }
 
-    return TransferServer(url)
+    return TransferServer(url, transferOptions)
   })
 }
 

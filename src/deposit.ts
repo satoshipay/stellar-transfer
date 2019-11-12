@@ -91,6 +91,9 @@ export async function deposit(
   }
 
   const params = {
+    lang: transferServer.options.lang,
+    wallet_name: transferServer.options.walletName,
+    wallet_url: transferServer.options.walletURL,
     ...options,
     type,
     asset_code: assetCode

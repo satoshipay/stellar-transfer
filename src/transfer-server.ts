@@ -116,12 +116,24 @@ export interface FetchTransactionsOptions {
   pagingId?: string
 }
 
+export interface TransferOptions {
+  lang?: string
+  walletName?: string
+  walletURL?: string
+}
+
 export type TransferServer = ReturnType<typeof TransferServer>
 
-export function TransferServer(serverURL: string) {
+export function TransferServer(
+  serverURL: string,
+  options: TransferOptions = {}
+) {
   return {
     get url() {
       return serverURL
+    },
+    get options() {
+      return options
     },
     async fetchInfo(): Promise<TransferInfo> {
       const response = await axios(joinURL(serverURL, "/info"))
