@@ -12,12 +12,6 @@ export interface KYCInteractiveResponse {
   type: "interactive_customer_info_needed"
 }
 
-export interface KYCNonInteractiveResponse {
-  /** A list of field names that need to be transmitted via SEP-12 for the deposit to proceed. */
-  fields: string[]
-  type: "non_interactive_customer_info_needed"
-}
-
 export interface KYCStatusResponse<
   Status extends "pending" | "denied" = "pending" | "denied"
 > {
@@ -30,7 +24,4 @@ export interface KYCStatusResponse<
   type: "customer_info_status"
 }
 
-export type KYCResponse =
-  | KYCInteractiveResponse
-  | KYCNonInteractiveResponse
-  | KYCStatusResponse
+export type KYCResponse = KYCInteractiveResponse | KYCStatusResponse

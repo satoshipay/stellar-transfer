@@ -1,10 +1,5 @@
 import axios from "axios"
-import {
-  KYCInteractiveResponse,
-  KYCNonInteractiveResponse,
-  KYCResponse,
-  KYCStatusResponse
-} from "./kyc"
+import { KYCInteractiveResponse, KYCResponse, KYCStatusResponse } from "./kyc"
 import { TransferServer } from "./transfer-server"
 import { joinURL } from "./util"
 
@@ -46,7 +41,7 @@ export interface WithdrawalRequestSuccess {
 }
 
 export interface WithdrawalRequestKYC {
-  data: KYCInteractiveResponse | KYCNonInteractiveResponse | KYCStatusResponse
+  data: KYCInteractiveResponse | KYCStatusResponse
   type: "kyc"
 }
 
