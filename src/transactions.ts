@@ -38,7 +38,7 @@ export interface TransferTransactionBase {
   amount_out: string
   amount_fee: string
   started_at: string
-  completed_at: string
+  completed_at: string | null
   stellar_transaction_id: string
   external_transaction_id?: string
   message?: string
