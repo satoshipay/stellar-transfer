@@ -1,5 +1,6 @@
 import axios from "axios"
 import { StellarTomlResolver } from "stellar-sdk"
+import { DepositTransaction, WithdrawalTransaction } from "./transactions"
 import { joinURL } from "./util"
 
 export interface TransferFields {
@@ -104,6 +105,17 @@ export interface TransferInfo {
   }
 }
 
+export interface FetchTransactionsOptions {
+  /** The response should contain transactions starting on or after this date & time. */
+  noOlderThan?: string
+  /** The response should contain at most limit transactions. */
+  limit?: number
+  /** The kind of transaction that is desired. Should be either deposit or withdrawal. */
+  kind?: "deposit" | "withdrawal"
+  /** The response should contain transactions starting prior to this ID (exclusive). */
+  pagingId?: string
+}
+
 export type TransferServer = ReturnType<typeof TransferServer>
 
 export function TransferServer(serverURL: string) {
@@ -113,6 +125,39 @@ export function TransferServer(serverURL: string) {
     },
     async fetchInfo(): Promise<TransferInfo> {
       const response = await axios(joinURL(serverURL, "/info"))
+      return response.data
+    },
+    async fetchTransaction(
+      id: string,
+      idType: "transfer" | "stellar" | "external" = "transfer"
+    ): Promise<{ transaction: DepositTransaction | WithdrawalTransaction }> {
+      const idParamName =
+        idType === "stellar"
+          ? "stellar_transaction_id"
+          : idType === "external"
+          ? "external_transaction_id"
+          : "id"
+
+      const response = await axios(joinURL(serverURL, "/transaction"), {
+        params: { [idParamName]: id }
+      })
+      return response.data
+    },
+    async fetchTransactions(
+      assetCode: string,
+      options: FetchTransactionsOptions = {}
+    ): Promise<{
+      transactions: Array<DepositTransaction | WithdrawalTransaction>
+    }> {
+      const response = await axios(joinURL(serverURL, "/transactions"), {
+        params: {
+          asset_code: assetCode,
+          kind: options.kind,
+          limit: options.limit,
+          no_older_than: options.noOlderThan,
+          paging_id: options.pagingId
+        }
+      })
       return response.data
     }
   }
