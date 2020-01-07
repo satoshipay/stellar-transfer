@@ -1,5 +1,5 @@
 import axios from "axios"
-import { KYCInteractiveResponse } from "./kyc"
+import { KYCInteractiveResponse, KYCResponse, KYCStatusResponse } from "./kyc"
 import { TransferServer } from "./transfer-server"
 import { joinURL } from "./util"
 
@@ -41,7 +41,7 @@ export interface WithdrawalRequestSuccess {
 }
 
 export interface WithdrawalRequestKYC {
-  data: KYCInteractiveResponse
+  data: KYCInteractiveResponse | KYCStatusResponse
   type: "kyc"
 }
 
@@ -127,7 +127,7 @@ export async function withdraw(
     }
   } else if (response.status === 403) {
     return {
-      data: response.data as KYCInteractiveResponse,
+      data: response.data as KYCResponse,
       type: "kyc"
     }
   } else if (response.data && response.data.message) {
