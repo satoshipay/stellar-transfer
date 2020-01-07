@@ -55,7 +55,7 @@ async function map<K, V>(
 }
 
 export async function fetchTransferServers(
-  horizon: Server,
+  horizonURL: string,
   assets: Asset[],
   transferOptions?: TransferOptions
 ): Promise<AssetTransferServerCache> {
@@ -66,6 +66,7 @@ export async function fetchTransferServers(
   }
 
   const fetchErrors: Error[] = []
+  const horizon = new Server(horizonURL)
 
   const issuers = dedupe(assets.map(asset => asset.getIssuer()))
   const transferServerURLsByIssuer = await map(
