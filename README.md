@@ -23,62 +23,96 @@ yarn add @satoshipay/stellar-sep-6
 
 ## Usage
 
-### Look up an anchor's transfer server
-
-```ts
-import { locateTransferServer } from "@satoshipay/stellar-sep-6"
-import { Server } from "stellar-sdk"
-
-const transferServerURL: string | null = await locateTransferServer(
-  "www.anchorusd.com"
-)
-```
-
 ### Fetch transfer server metadata
 
 ```ts
-import { TransferServer } from "@satoshipay/stellar-sep-6"
+import {
+  openTransferServer,
+  fetchTransferInfos,
+  TransferServer
+} from "@satoshipay/stellar-sep-6"
 
-const transferServer = TransferServer(transferServerURL)
-const info = await transferServer.fetchInfo()
+const transferServer = await openTransferServer("www.anchorusd.com", {
+  // Optional
+  lang: "en",
+  wallet_name: "Demo wallet",
+  wallet_version: "1.2.3"
+})
+
+const transferInfos = await fetchTransferInfos(transferServer)
+const { depositableAssets, withdrawableAssets } = transferInfos
+
+console.log(
+  `Depositable assets: ${depositableAssets
+    .map(asset => asset.getCode())
+    .join(", ")}`
+)
+console.log(
+  `Withdrawable assets: ${withdrawableAssets
+    .map(asset => asset.getCode())
+    .join(", ")}`
+)
 ```
 
 ### Request a withdrawal
 
 ```ts
-import { withdraw, TransferServer } from "@satoshipay/stellar-sep-6"
-import { Keypair } from "stellar-sdk"
+import {
+  openTransferServer,
+  requestWithdrawal,
+  KYCResponseType,
+  TransferResultType,
+  TransferServer,
+  Withdrawal,
+  WithdrawalType
+} from "@satoshipay/stellar-sep-6"
 
-const myKeypair = Keypair.fromSecret("S...")
-const transferServer = TransferServer(transferServerURL)
+const transferServer = await openTransferServer("www.anchorusd.com")
+const transferInfos = await fetchTransferInfos(transferServer)
 
-const result = await withdraw(transferServer, "bank_account", "EURT", {
-  account: myKeypair.publicKey(),
+const { withdrawableAssets } = transferInfos
+const assetToWithdraw = withdrawableAssets.find(asset => asset.code === "USD")
 
-  // The `fetchInfo()` result describes what needs to be passed here
+const withdrawal = Withdrawal(transferServer, assetToWithdraw, {
+  // Optional if using interactive withdrawal (SEP-6 / SEP-24, not SEP-26)
+  type: WithdrawalType.bankAccount,
   dest: "DE00 1234 5678 9012 3456 00",
   dest_extra: "NOLADEXYZ"
 })
 
-if (result.type === "success") {
-  // `result.data` contains the information where and how to send the tokens
-  // to initiate the withdrawal...
+const instructions = await requestWithdrawal(
+  withdrawal,
+  /* Depends on anchor if authentication is necessary */
+  sep10AuthToken
+)
+
+if (instructions.type === TransferResultType.ok) {
+  // `instructions.data` contains the information where and how to send the tokens
+  // to conduct the withdrawal
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "interactive_customer_info_needed"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.interactive
 ) {
-  // Redirect to anchor's KYC page...
+  // Open interactive KYC page at `instructions.data.url`
+  // Use `instructions.data.id` to query the withdrawal transaction status
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "non_interactive_customer_info_needed"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.nonInteractive
 ) {
-  // Request KYC data from the user in our app, then send to anchor...
+  // SEP-12 data submission
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "customer_info_status"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.status
 ) {
-  // `result.data.status` will be "pending" or "denied"
-  // If the KYC succeeded, the anchor will not send this response, but `result.type = "success"`
+  if (instructions.data.status === "pending") {
+    // KYC data is being reviewed – poll the withdrawal transaction status until it changes, then proceed
+  } else if (instructions.data.status === "denied") {
+    throw Error(
+      `KYC has failed. Get more details here: ${
+        instructions.data.more_info_url
+      }`
+    )
+  }
 }
 ```
 

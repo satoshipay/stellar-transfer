@@ -59,3 +59,5 @@ export interface WithdrawalTransaction extends TransferTransactionBase {
   from: string
   to: string
 }
+
+export type TransferTransaction = DepositTransaction | WithdrawalTransaction

@@ -1,7 +1,6 @@
-import axios from "axios"
-import { KYCInteractiveResponse, KYCResponse, KYCStatusResponse } from "./kyc"
+import { Asset } from "stellar-sdk"
+import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
-import { joinURL } from "./util"
 
 export interface DepositSuccessResponse {
   /**
@@ -32,14 +31,16 @@ export interface DepositSuccessResponse {
   }
 }
 
-export interface DepositRequestSuccess {
+export interface DepositInstructionsSuccess {
   data: DepositSuccessResponse
-  type: "success"
+  type: TransferResultType.ok
 }
 
-export interface DepositRequestKYC {
-  data: KYCInteractiveResponse | KYCStatusResponse
-  type: "kyc"
+export type DepositInstructions = DepositInstructionsSuccess
+
+export enum DepositType {
+  SEPA = "SEPA",
+  SWIFT = "SWIFT"
 }
 
 export interface DepositOptions {
@@ -49,6 +50,13 @@ export interface DepositOptions {
    * The anchor can use account to look up the user's KYC information.
    */
   account: string
+
+  /**
+   * The code of the asset the user wants to deposit with the anchor. Ex BTC, ETH, USD,
+   * INR, etc. This may be different from the asset code that the anchor issues.
+   * Ex if a user deposits BTC and receives MyBTC tokens, asset_code must be BTC.
+   */
+  asset_code: string
 
   /** Email address of depositor. If desired, an anchor can use this to send email updates to the user about the deposit. */
   email_address?: string
@@ -65,6 +73,12 @@ export interface DepositOptions {
   /** Type of memo. One of text, id or hash */
   memo_type?: "hash" | "id" | "text"
 
+  /**
+   * Type of deposit. If the anchor supports multiple deposit methods (e.g. SEPA or SWIFT),
+   * the wallet should specify type.
+   */
+  type?: DepositType | string
+
   /** In communications / pages about the deposit, anchor should display the wallet name to the user to explain where funds are coming from. */
   wallet_name?: string
 
@@ -72,18 +86,44 @@ export interface DepositOptions {
   wallet_url?: string
 }
 
-export enum DepositType {
-  SEPA = "SEPA",
-  SWIFT = "SWIFT"
+export interface Deposit {
+  accountID: string
+  asset: Asset
+  fields: DepositOptions
+  transferServer: TransferServer
 }
 
-export async function deposit(
+export function Deposit(
   transferServer: TransferServer,
-  type: DepositType | string,
-  assetCode: string,
-  authToken: string | null | undefined,
-  options: DepositOptions
-): Promise<DepositRequestSuccess | DepositRequestKYC> {
+  asset: Asset,
+  destinationAccountID: string,
+  fields: Omit<DepositOptions, "account" | "asset_code"> &
+    Record<string, string> = {}
+): Deposit {
+  if (asset.isNative()) {
+    throw Error(
+      `Cannot deposit lumens, but only assets issued by ${
+        transferServer.domain
+      }.`
+    )
+  }
+  return {
+    accountID: destinationAccountID,
+    asset,
+    fields: {
+      ...fields,
+      account: destinationAccountID,
+      asset_code: asset.getCode()
+    },
+    transferServer
+  }
+}
+
+export async function requestDeposit(
+  deposit: Deposit,
+  authToken?: string | null | undefined
+): Promise<DepositInstructions> {
+  const { fields, transferServer } = deposit
   const headers: any = {}
 
   if (authToken) {
@@ -94,35 +134,33 @@ export async function deposit(
     lang: transferServer.options.lang,
     wallet_name: transferServer.options.walletName,
     wallet_url: transferServer.options.walletURL,
-    ...options,
-    type,
-    asset_code: assetCode
+    ...fields
   }
 
-  const url = joinURL(transferServer.url, "/deposit")
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
-  const response = await axios(url, { headers, params, validateStatus })
+  const response = await transferServer.get("/deposit", {
+    headers,
+    params,
+    validateStatus
+  })
 
   if (response.status === 200) {
     return {
       data: response.data as DepositSuccessResponse,
-      type: "success"
-    }
-  } else if (response.status === 403) {
-    return {
-      data: response.data as KYCResponse,
-      type: "kyc"
+      type: TransferResultType.ok
     }
   } else if (response.data && response.data.message) {
     throw Error(
-      `Anchor responded with status code ${response.status}: ${
-        response.data.message
-      }`
+      `${transferServer.domain} responded with status code ${
+        response.status
+      }: ${response.data.message}`
     )
   } else {
     throw Error(
-      `Anchor responded with unexpected status code: ${response.status}`
+      `${transferServer.domain} responded with unexpected status code: ${
+        response.status
+      }`
     )
   }
 }

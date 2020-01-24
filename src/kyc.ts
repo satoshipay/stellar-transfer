@@ -24,4 +24,13 @@ export interface KYCStatusResponse<
   type: "customer_info_status"
 }
 
-export type KYCResponse = KYCInteractiveResponse | KYCStatusResponse
+export enum KYCResponseType {
+  interactive = "interactive",
+  nonInteractive = "non-interactive",
+  status = "status"
+}
+
+export type KYCResponse =
+  | KYCInteractiveResponse
+  | KYCNonInteractiveResponse
+  | KYCStatusResponse
