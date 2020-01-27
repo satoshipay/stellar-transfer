@@ -1,4 +1,5 @@
 export * from "./deposit"
+export * from "./fees"
 export * from "./info"
 export * from "./kyc"
 export * from "./transactions"

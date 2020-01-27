@@ -1,19 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { Asset, Server, StellarTomlResolver } from "stellar-sdk"
 import { StellarToml } from "./stellar-toml"
-import { TransferTransaction } from "./transactions"
 import { joinURL } from "./util"
-
-export interface FetchTransactionsOptions {
-  /** The response should contain transactions starting on or after this date & time. */
-  noOlderThan?: string
-  /** The response should contain at most limit transactions. */
-  limit?: number
-  /** The kind of transaction that is desired. Should be either deposit or withdrawal. */
-  kind?: "deposit" | "withdrawal"
-  /** The response should contain transactions starting prior to this ID (exclusive). */
-  pagingId?: string
-}
 
 export interface TransferOptions {
   lang?: string
@@ -54,55 +42,13 @@ export function TransferServer(
       path: string,
       options?: AxiosRequestConfig
     ): Promise<AxiosResponse<T>> {
-      return axios(joinURL(serverURL, path), options)
+      return axios.get(joinURL(serverURL, path), options)
     },
-    async fetchTransaction(
-      id: string,
-      idType: "transfer" | "stellar" | "external" = "transfer",
-      authToken?: string
-    ): Promise<{ transaction: TransferTransaction }> {
-      const headers: any = {}
-
-      if (authToken) {
-        headers["Authorization"] = `Bearer ${authToken}`
-      }
-
-      const idParamName =
-        idType === "stellar"
-          ? "stellar_transaction_id"
-          : idType === "external"
-          ? "external_transaction_id"
-          : "id"
-
-      const response = await axios(joinURL(serverURL, "/transaction"), {
-        headers,
-        params: { [idParamName]: id }
-      })
-      return response.data
-    },
-
-    async fetchTransactions(
-      assetCode: string,
-      authToken?: string,
-      options: FetchTransactionsOptions = {}
-    ): Promise<{ transactions: TransferTransaction[] }> {
-      const headers: any = {}
-
-      if (authToken) {
-        headers["Authorization"] = `Bearer ${authToken}`
-      }
-
-      const response = await axios(joinURL(serverURL, "/transactions"), {
-        headers,
-        params: {
-          asset_code: assetCode,
-          kind: options.kind,
-          limit: options.limit,
-          no_older_than: options.noOlderThan,
-          paging_id: options.pagingId
-        }
-      })
-      return response.data
+    async post<T = any>(
+      path: string,
+      options?: AxiosRequestConfig
+    ): Promise<AxiosResponse<T>> {
+      return axios.post(joinURL(serverURL, path), options)
     }
   }
 }

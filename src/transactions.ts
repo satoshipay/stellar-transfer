@@ -1,3 +1,5 @@
+import { TransferServer } from "./transfer-server"
+
 export enum TransferStatus {
   /** deposit/withdrawal fully completed. */
   completed = "completed",
@@ -61,3 +63,67 @@ export interface WithdrawalTransaction extends TransferTransactionBase {
 }
 
 export type TransferTransaction = DepositTransaction | WithdrawalTransaction
+
+export interface FetchTransactionsOptions {
+  /** The response should contain transactions starting on or after this date & time. */
+  noOlderThan?: string
+  /** The response should contain at most limit transactions. */
+  limit?: number
+  /** The kind of transaction that is desired. Should be either deposit or withdrawal. */
+  kind?: "deposit" | "withdrawal"
+  /** The response should contain transactions starting prior to this ID (exclusive). */
+  pagingId?: string
+}
+
+export async function fetchTransaction(
+  transferServer: TransferServer,
+  id: string,
+  idType: "transfer" | "stellar" | "external" = "transfer",
+  authToken?: string
+): Promise<{ transaction: TransferTransaction }> {
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  const idParamName =
+    idType === "stellar"
+      ? "stellar_transaction_id"
+      : idType === "external"
+      ? "external_transaction_id"
+      : "id"
+
+  const response = await transferServer.get("/transaction", {
+    headers,
+    params: {
+      [idParamName]: id
+    }
+  })
+  return response.data
+}
+
+export async function fetchTransactions(
+  transferServer: TransferServer,
+  assetCode: string,
+  authToken?: string,
+  options: FetchTransactionsOptions = {}
+): Promise<{ transactions: TransferTransaction[] }> {
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  const response = await transferServer.get("/transactions", {
+    headers,
+    params: {
+      asset_code: assetCode,
+      kind: options.kind,
+      limit: options.limit,
+      no_older_than: options.noOlderThan,
+      paging_id: options.pagingId
+    }
+  })
+  return response.data
+}

@@ -59,7 +59,7 @@ console.log(
 ```ts
 import {
   openTransferServer,
-  requestWithdrawal,
+  requestLegacyWithdrawal,
   KYCResponseType,
   TransferResultType,
   TransferServer,
@@ -80,7 +80,7 @@ const withdrawal = Withdrawal(transferServer, assetToWithdraw, {
   dest_extra: "NOLADEXYZ"
 })
 
-const instructions = await requestWithdrawal(
+const instructions = await requestLegacyWithdrawal(
   withdrawal,
   /* Depends on anchor if authentication is necessary */
   sep10AuthToken

@@ -1,3 +1,5 @@
+import { AxiosResponse } from "axios"
+import FormData from "form-data"
 import { Asset } from "stellar-sdk"
 import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
@@ -111,6 +113,9 @@ export function Deposit(
     accountID: destinationAccountID,
     asset,
     fields: {
+      lang: transferServer.options.lang,
+      wallet_name: transferServer.options.walletName,
+      wallet_url: transferServer.options.walletURL,
       ...fields,
       account: destinationAccountID,
       asset_code: asset.getCode()
@@ -119,7 +124,49 @@ export function Deposit(
   }
 }
 
-export async function requestDeposit(
+/**
+ * Deposit using the SEP-24 endpoint
+ */
+export async function requestInteractiveDeposit(
+  deposit: Deposit,
+  authToken?: string | null | undefined
+) {
+  const { fields, transferServer } = deposit
+  const body = new FormData()
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
+    body.append(fieldName, fields[fieldName])
+  })
+
+  const validateStatus = (status: number) =>
+    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+
+  try {
+    return requestDeposit(deposit, () => {
+      return transferServer.post("/transactions/deposit/interactive", {
+        data: body,
+        headers,
+        validateStatus
+      })
+    })
+  } catch (error) {
+    if (error && error.response && error.response.status === 404) {
+      return requestLegacyDeposit(deposit, authToken)
+    } else {
+      throw error
+    }
+  }
+}
+
+/**
+ * Deposit using the old SEP-6 endpoint
+ */
+export async function requestLegacyDeposit(
   deposit: Deposit,
   authToken?: string | null | undefined
 ): Promise<DepositInstructions> {
@@ -130,20 +177,28 @@ export async function requestDeposit(
     headers["Authorization"] = `Bearer ${authToken}`
   }
 
-  const params = {
-    lang: transferServer.options.lang,
-    wallet_name: transferServer.options.walletName,
-    wallet_url: transferServer.options.walletURL,
-    ...fields
-  }
-
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
-  const response = await transferServer.get("/deposit", {
-    headers,
-    params,
-    validateStatus
+
+  return requestDeposit(deposit, () => {
+    return transferServer.get("/deposit", {
+      headers,
+      params: fields,
+      validateStatus
+    })
   })
+}
+
+/**
+ * Use the old SEP-6 endpoint.
+ */
+async function requestDeposit(
+  deposit: Deposit,
+  sendRequest: () => Promise<AxiosResponse>
+): Promise<DepositInstructions> {
+  const { transferServer } = deposit
+
+  const response = await sendRequest()
 
   if (response.status === 200) {
     return {

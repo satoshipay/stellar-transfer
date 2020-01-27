@@ -1,3 +1,5 @@
+import { AxiosResponse } from "axios"
+import FormData from "form-data"
 import {
   Asset,
   Operation,
@@ -153,6 +155,9 @@ export function Withdrawal(
   return {
     asset,
     fields: {
+      lang: transferServer.options.lang,
+      wallet_name: transferServer.options.walletName,
+      wallet_url: transferServer.options.walletURL,
       ...fields,
       asset_code: asset.getCode()
     },
@@ -169,7 +174,49 @@ const kycSubTypes: Record<
   non_interactive_customer_info_needed: "non-interactive"
 }
 
-export async function requestWithdrawal(
+/**
+ * Withdraw using the SEP-24 endpoint
+ */
+export async function requestInteractiveWithdrawal(
+  withdrawal: Withdrawal,
+  authToken?: string | null | undefined
+): Promise<WithdrawalInstructions> {
+  const { fields, transferServer } = withdrawal
+  const body = new FormData()
+  const headers: any = {}
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
+    body.append(fieldName, fields[fieldName])
+  })
+
+  const validateStatus = (status: number) =>
+    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+
+  try {
+    return requestWithdrawal(withdrawal, () => {
+      return transferServer.post("/transactions/withdraw/interactive", {
+        data: body,
+        headers,
+        validateStatus
+      })
+    })
+  } catch (error) {
+    if (error && error.response && error.response.status === 404) {
+      return requestLegacyWithdrawal(withdrawal, authToken)
+    } else {
+      throw error
+    }
+  }
+}
+
+/**
+ * Withdraw using the old SEP-6 endpoint
+ */
+export async function requestLegacyWithdrawal(
   withdrawal: Withdrawal,
   authToken?: string | null | undefined
 ): Promise<WithdrawalInstructions> {
@@ -183,11 +230,21 @@ export async function requestWithdrawal(
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
 
-  const response = await transferServer.get("/withdraw", {
-    headers,
-    params: fields,
-    validateStatus
-  })
+  return requestWithdrawal(withdrawal, () =>
+    transferServer.get("/withdraw", {
+      headers,
+      params: fields,
+      validateStatus
+    })
+  )
+}
+
+async function requestWithdrawal(
+  withdrawal: Withdrawal,
+  sendRequest: () => Promise<AxiosResponse>
+): Promise<WithdrawalInstructions> {
+  const { transferServer } = withdrawal
+  const response = await sendRequest()
 
   if (response.status === 200) {
     return {
