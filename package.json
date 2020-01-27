@@ -1,5 +1,5 @@
 {
-  "name": "@satoshipay/stellar-sep-6",
+  "name": "@satoshipay/stellar-transfer",
   "version": "0.0.0",
   "description": "Stellar SEP-6 / SEP-24 implementation",
   "author": "SatoshiPay Ltd (https://satoshipay.io/)",

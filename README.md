@@ -1,4 +1,4 @@
-# @satoshipay/stellar-sep-6
+# @satoshipay/stellar-transfer
 
 [Stellar Ecosystem Proposal 6 - "Anchor/Client interoperability"](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0006.md) client SDK, allowing Stellar wallets to withdraw or deposit third-party fiat or crypto assets like USD, EURT, BTC, ETH, ...
 
@@ -9,9 +9,9 @@ That means that users can send EURT to the anchor, requesting a payout in fiat E
 ## Installation
 
 ```
-npm install @satoshipay/stellar-sep-6
+npm install @satoshipay/stellar-transfer
 # or with yarn:
-yarn add @satoshipay/stellar-sep-6
+yarn add @satoshipay/stellar-transfer
 ```
 
 ## Concepts
@@ -30,7 +30,7 @@ import {
   openTransferServer,
   fetchTransferInfos,
   TransferServer
-} from "@satoshipay/stellar-sep-6"
+} from "@satoshipay/stellar-transfer"
 
 const transferServer = await openTransferServer("www.anchorusd.com", {
   // Optional
@@ -65,7 +65,7 @@ import {
   TransferServer,
   Withdrawal,
   WithdrawalType
-} from "@satoshipay/stellar-sep-6"
+} from "@satoshipay/stellar-transfer"
 
 const transferServer = await openTransferServer("www.anchorusd.com")
 const transferInfos = await fetchTransferInfos(transferServer)
@@ -123,7 +123,7 @@ import {
   fetchAssetTransferInfos,
   fetchTransferServers,
   TransferInfo
-} from "@satoshipay/stellar-sep-6"
+} from "@satoshipay/stellar-transfer"
 import { Asset, Server } from "stellar-sdk"
 
 const assets = [
