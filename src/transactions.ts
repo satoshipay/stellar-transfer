@@ -84,6 +84,7 @@ export async function fetchTransaction(
   const headers: any = {}
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
 
@@ -112,6 +113,7 @@ export async function fetchTransactions(
   const headers: any = {}
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
 

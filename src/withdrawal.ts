@@ -2,8 +2,8 @@ import { AxiosResponse } from "axios"
 import FormData from "form-data"
 import {
   Asset,
-  Operation,
   Memo,
+  Operation,
   OperationOptions,
   Transaction,
   TransactionBuilder
@@ -55,7 +55,7 @@ export interface WithdrawalInstructionsSuccess {
   type: TransferResultType.ok
 }
 
-type KycDataByType = {
+interface KycDataByType {
   [KYCResponseType.interactive]: KYCInteractiveResponse
   [KYCResponseType.nonInteractive]: KYCNonInteractiveResponse
   [KYCResponseType.status]: KYCStatusResponse
@@ -183,23 +183,25 @@ export async function requestInteractiveWithdrawal(
 ): Promise<WithdrawalInstructions> {
   const { fields, transferServer } = withdrawal
   const body = new FormData()
-  const headers: any = {}
+  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
+    if (typeof fields[fieldName] !== "undefined") {
+      body.append(fieldName, fields[fieldName])
+    }
+  })
+
+  const headers: any = { ...body.getHeaders() }
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
-
-  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
-    body.append(fieldName, fields[fieldName])
-  })
 
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
 
   try {
     return requestWithdrawal(withdrawal, () => {
-      return transferServer.post("/transactions/withdraw/interactive", {
-        data: body,
+      return transferServer.post("/transactions/withdraw/interactive", body, {
         headers,
         validateStatus
       })
@@ -224,6 +226,7 @@ export async function requestLegacyWithdrawal(
   const headers: any = {}
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
 
@@ -246,12 +249,10 @@ async function requestWithdrawal(
   const { transferServer } = withdrawal
   const response = await sendRequest()
 
-  if (response.status === 200) {
-    return {
-      data: response.data as WithdrawalSuccessResponse,
-      type: TransferResultType.ok
-    }
-  } else if (response.status === 403) {
+  if (
+    response.status === 403 ||
+    response.data.type === "interactive_customer_info_needed"
+  ) {
     const subtype = kycSubTypes[(response.data as KYCResponse).type]
     if (!subtype) {
       throw Error(
@@ -264,6 +265,11 @@ async function requestWithdrawal(
       data: response.data as KYCResponse,
       subtype,
       type: TransferResultType.kyc
+    }
+  } else if (response.status === 200) {
+    return {
+      data: response.data as WithdrawalSuccessResponse,
+      type: TransferResultType.ok
     }
   } else if (response.data && response.data.message) {
     throw Error(

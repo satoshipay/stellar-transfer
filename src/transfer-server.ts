@@ -40,15 +40,16 @@ export function TransferServer(
     },
     async get<T = any>(
       path: string,
-      options?: AxiosRequestConfig
+      reqOptions?: AxiosRequestConfig
     ): Promise<AxiosResponse<T>> {
-      return axios.get(joinURL(serverURL, path), options)
+      return axios.get(joinURL(serverURL, path), reqOptions)
     },
     async post<T = any>(
       path: string,
-      options?: AxiosRequestConfig
+      body: any,
+      reqOptions?: AxiosRequestConfig
     ): Promise<AxiosResponse<T>> {
-      return axios.post(joinURL(serverURL, path), options)
+      return axios.post(joinURL(serverURL, path), body, reqOptions)
     }
   }
 }

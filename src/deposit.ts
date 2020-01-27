@@ -133,23 +133,25 @@ export async function requestInteractiveDeposit(
 ) {
   const { fields, transferServer } = deposit
   const body = new FormData()
-  const headers: any = {}
+  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
+    if (typeof fields[fieldName] !== "undefined") {
+      body.append(fieldName, fields[fieldName])
+    }
+  })
+
+  const headers: any = { ...body.getHeaders() }
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
-
-  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
-    body.append(fieldName, fields[fieldName])
-  })
 
   const validateStatus = (status: number) =>
     status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
 
   try {
     return requestDeposit(deposit, () => {
-      return transferServer.post("/transactions/deposit/interactive", {
-        data: body,
+      return transferServer.post("/transactions/deposit/interactive", body, {
         headers,
         validateStatus
       })
@@ -174,6 +176,7 @@ export async function requestLegacyDeposit(
   const headers: any = {}
 
   if (authToken) {
+    // tslint:disable-next-line no-string-literal
     headers["Authorization"] = `Bearer ${authToken}`
   }
 
