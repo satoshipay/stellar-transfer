@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import { Asset, Server, StellarTomlResolver } from "stellar-sdk"
+import { Asset, Networks, Server, StellarTomlResolver } from "stellar-sdk"
 import { StellarToml } from "./stellar-toml"
 import { joinURL } from "./util"
 
@@ -23,6 +23,7 @@ export function TransferServer(
   domain: string,
   serverURL: string,
   assets: Asset[],
+  network: Networks,
   options: TransferOptions = {}
 ) {
   return {
@@ -31,6 +32,9 @@ export function TransferServer(
     },
     get domain() {
       return domain
+    },
+    get network() {
+      return network
     },
     get url() {
       return serverURL
@@ -56,6 +60,7 @@ export function TransferServer(
 
 export async function openTransferServer(
   domain: string,
+  network: Networks,
   options?: TransferOptions
 ) {
   const stellarTomlData = await StellarTomlResolver.resolve(domain)
@@ -63,7 +68,7 @@ export async function openTransferServer(
     getTransferServerURL(stellarTomlData) ||
     fail(`There seems to be no transfer server on ${domain}.`)
   const assets = resolveAssets(stellarTomlData, domain)
-  return TransferServer(domain, serverURL, assets, options)
+  return TransferServer(domain, serverURL, assets, network, options)
 }
 
 export async function locateTransferServer(

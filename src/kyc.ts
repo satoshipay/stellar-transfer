@@ -1,3 +1,6 @@
+import { AxiosResponse } from "axios"
+import { TransferResultType } from "./result"
+
 export interface KYCInteractiveResponse {
   /** The anchor's internal ID for this deposit / withdrawal request. Can be passed to the `/transaction` endpoint to check status of the request. */
   id: string
@@ -34,3 +37,47 @@ export type KYCResponse =
   | KYCInteractiveResponse
   | KYCNonInteractiveResponse
   | KYCStatusResponse
+
+interface KycDataByType {
+  [KYCResponseType.interactive]: KYCInteractiveResponse
+  [KYCResponseType.nonInteractive]: KYCNonInteractiveResponse
+  [KYCResponseType.status]: KYCStatusResponse
+}
+
+export interface KYCInstructions<
+  KycType extends keyof KycDataByType = keyof KycDataByType
+> {
+  data: KycDataByType[KycType]
+  subtype: KycType
+  type: TransferResultType.kyc
+}
+
+const kycSubTypes: Record<KYCResponse["type"], KYCResponseType> = {
+  customer_info_status: KYCResponseType.status,
+  interactive_customer_info_needed: KYCResponseType.interactive,
+  non_interactive_customer_info_needed: KYCResponseType.nonInteractive
+}
+
+export function createKYCInstructions(
+  response: AxiosResponse,
+  domain: string
+): KYCInstructions {
+  const subtype = kycSubTypes[(response.data as KYCResponse).type]
+  if (!subtype) {
+    throw Error(
+      `${domain} requires KYC, but did not specify valid KYC instructions.`
+    )
+  }
+  return {
+    data: response.data as KYCResponse,
+    subtype,
+    type: TransferResultType.kyc
+  }
+}
+
+export function isKYCRequired(response: AxiosResponse) {
+  return (
+    response.status === 403 ||
+    response.data.type === "interactive_customer_info_needed"
+  )
+}

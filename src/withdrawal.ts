@@ -8,13 +8,8 @@ import {
   Transaction,
   TransactionBuilder
 } from "stellar-sdk"
-import {
-  KYCInteractiveResponse,
-  KYCNonInteractiveResponse,
-  KYCResponse,
-  KYCResponseType,
-  KYCStatusResponse
-} from "./kyc"
+import { ResponseError } from "./errors"
+import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
 import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
 
@@ -55,23 +50,9 @@ export interface WithdrawalInstructionsSuccess {
   type: TransferResultType.ok
 }
 
-interface KycDataByType {
-  [KYCResponseType.interactive]: KYCInteractiveResponse
-  [KYCResponseType.nonInteractive]: KYCNonInteractiveResponse
-  [KYCResponseType.status]: KYCStatusResponse
-}
-
-export interface WithdrawalInstructionsKYC<
-  KycType extends keyof KycDataByType
-> {
-  data: KycDataByType[KycType]
-  subtype: KycType
-  type: TransferResultType.kyc
-}
-
 export type WithdrawalInstructions =
   | WithdrawalInstructionsSuccess
-  | WithdrawalInstructionsKYC<any>
+  | KYCInstructions
 
 export enum WithdrawalType {
   bankAccount = "bank_account",
@@ -132,12 +113,27 @@ export interface WithdrawalOptions {
 
   /** Anchor can show this to the user when referencing the wallet involved in the withdrawal (ex. in the anchor's transaction history) */
   wallet_url?: string
+
+  /** The anchor might support custom fields. */
+  [customField: string]: string | undefined
 }
 
 export interface Withdrawal {
   asset: Asset
   fields: WithdrawalOptions
   transferServer: TransferServer
+
+  /**
+   * Withdraw using the SEP-24 endpoint, redirecting to anchor website for KYC
+   */
+  interactive(
+    authToken?: string | null | undefined
+  ): Promise<WithdrawalInstructions>
+
+  /**
+   * Withdraw using the old SEP-6 endpoint
+   */
+  legacy(authToken?: string | null | undefined): Promise<WithdrawalInstructions>
 }
 
 export function Withdrawal(
@@ -152,7 +148,7 @@ export function Withdrawal(
       }.`
     )
   }
-  return {
+  const withdrawal = {
     asset,
     fields: {
       lang: transferServer.options.lang,
@@ -161,23 +157,22 @@ export function Withdrawal(
       ...fields,
       asset_code: asset.getCode()
     },
+    interactive(
+      authToken?: string | null | undefined
+    ): Promise<WithdrawalInstructions> {
+      return requestInteractiveWithdrawal(withdrawal, authToken)
+    },
+    legacy(
+      authToken?: string | null | undefined
+    ): Promise<WithdrawalInstructions> {
+      return requestLegacyWithdrawal(withdrawal, authToken)
+    },
     transferServer
   }
+  return withdrawal
 }
 
-const kycSubTypes: Record<
-  KYCResponse["type"],
-  "interactive" | "non-interactive" | "pending"
-> = {
-  customer_info_status: "pending",
-  interactive_customer_info_needed: "interactive",
-  non_interactive_customer_info_needed: "non-interactive"
-}
-
-/**
- * Withdraw using the SEP-24 endpoint
- */
-export async function requestInteractiveWithdrawal(
+async function requestInteractiveWithdrawal(
   withdrawal: Withdrawal,
   authToken?: string | null | undefined
 ): Promise<WithdrawalInstructions> {
@@ -185,11 +180,13 @@ export async function requestInteractiveWithdrawal(
   const body = new FormData()
   ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
     if (typeof fields[fieldName] !== "undefined") {
-      body.append(fieldName, fields[fieldName])
+      body.append(fieldName as string, fields[fieldName])
     }
   })
 
-  const headers: any = { ...body.getHeaders() }
+  const headers: any = {
+    "Content-Type": "multipart/form-data"
+  }
 
   if (authToken) {
     // tslint:disable-next-line no-string-literal
@@ -197,10 +194,10 @@ export async function requestInteractiveWithdrawal(
   }
 
   const validateStatus = (status: number) =>
-    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
 
   try {
-    return requestWithdrawal(withdrawal, () => {
+    return await requestWithdrawal(withdrawal, () => {
       return transferServer.post("/transactions/withdraw/interactive", body, {
         headers,
         validateStatus
@@ -209,16 +206,15 @@ export async function requestInteractiveWithdrawal(
   } catch (error) {
     if (error && error.response && error.response.status === 404) {
       return requestLegacyWithdrawal(withdrawal, authToken)
+    } else if (error && error.response) {
+      throw ResponseError(error.response, withdrawal.transferServer)
     } else {
-      throw error
+      return requestLegacyWithdrawal(withdrawal, authToken)
     }
   }
 }
 
-/**
- * Withdraw using the old SEP-6 endpoint
- */
-export async function requestLegacyWithdrawal(
+async function requestLegacyWithdrawal(
   withdrawal: Withdrawal,
   authToken?: string | null | undefined
 ): Promise<WithdrawalInstructions> {
@@ -231,7 +227,7 @@ export async function requestLegacyWithdrawal(
   }
 
   const validateStatus = (status: number) =>
-    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
 
   return requestWithdrawal(withdrawal, () =>
     transferServer.get("/withdraw", {
@@ -249,40 +245,15 @@ async function requestWithdrawal(
   const { transferServer } = withdrawal
   const response = await sendRequest()
 
-  if (
-    response.status === 403 ||
-    response.data.type === "interactive_customer_info_needed"
-  ) {
-    const subtype = kycSubTypes[(response.data as KYCResponse).type]
-    if (!subtype) {
-      throw Error(
-        `${
-          transferServer.domain
-        } requires KYC, but did not specify valid KYC instructions.`
-      )
-    }
-    return {
-      data: response.data as KYCResponse,
-      subtype,
-      type: TransferResultType.kyc
-    }
+  if (isKYCRequired(response)) {
+    return createKYCInstructions(response, transferServer.domain)
   } else if (response.status === 200) {
     return {
       data: response.data as WithdrawalSuccessResponse,
       type: TransferResultType.ok
     }
-  } else if (response.data && response.data.message) {
-    throw Error(
-      `${transferServer.domain} responded with status code ${
-        response.status
-      }: ${response.data.message}`
-    )
   } else {
-    throw Error(
-      `${transferServer.domain} responded with unexpected status code: ${
-        response.status
-      }`
-    )
+    throw ResponseError(response, withdrawal.transferServer)
   }
 }
 

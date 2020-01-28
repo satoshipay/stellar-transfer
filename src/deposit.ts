@@ -1,8 +1,10 @@
 import { AxiosResponse } from "axios"
 import FormData from "form-data"
 import { Asset } from "stellar-sdk"
+import { ResponseError } from "./errors"
 import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
+import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
 
 export interface DepositSuccessResponse {
   /**
@@ -38,7 +40,7 @@ export interface DepositInstructionsSuccess {
   type: TransferResultType.ok
 }
 
-export type DepositInstructions = DepositInstructionsSuccess
+export type DepositInstructions = DepositInstructionsSuccess | KYCInstructions
 
 export enum DepositType {
   SEPA = "SEPA",
@@ -86,6 +88,9 @@ export interface DepositOptions {
 
   /** Anchor can show this to the user when referencing the wallet involved in the deposit (ex. in the anchor's transaction history) */
   wallet_url?: string
+
+  /** The anchor might support custom fields. */
+  [customField: string]: string | undefined
 }
 
 export interface Deposit {
@@ -93,6 +98,18 @@ export interface Deposit {
   asset: Asset
   fields: DepositOptions
   transferServer: TransferServer
+
+  /**
+   * Withdraw using the SEP-24 endpoint, redirecting to anchor website for KYC
+   */
+  interactive(
+    authToken?: string | null | undefined
+  ): Promise<DepositInstructions>
+
+  /**
+   * Withdraw using the old SEP-6 endpoint
+   */
+  legacy(authToken?: string | null | undefined): Promise<DepositInstructions>
 }
 
 export function Deposit(
@@ -109,7 +126,7 @@ export function Deposit(
       }.`
     )
   }
-  return {
+  const deposit = {
     accountID: destinationAccountID,
     asset,
     fields: {
@@ -120,14 +137,22 @@ export function Deposit(
       account: destinationAccountID,
       asset_code: asset.getCode()
     },
+    interactive(
+      authToken?: string | null | undefined
+    ): Promise<DepositInstructions> {
+      return requestInteractiveDeposit(deposit, authToken)
+    },
+    legacy(
+      authToken?: string | null | undefined
+    ): Promise<DepositInstructions> {
+      return requestLegacyDeposit(deposit, authToken)
+    },
     transferServer
   }
+  return deposit
 }
 
-/**
- * Deposit using the SEP-24 endpoint
- */
-export async function requestInteractiveDeposit(
+async function requestInteractiveDeposit(
   deposit: Deposit,
   authToken?: string | null | undefined
 ) {
@@ -135,11 +160,13 @@ export async function requestInteractiveDeposit(
   const body = new FormData()
   ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
     if (typeof fields[fieldName] !== "undefined") {
-      body.append(fieldName, fields[fieldName])
+      body.append(fieldName as string, fields[fieldName])
     }
   })
 
-  const headers: any = { ...body.getHeaders() }
+  const headers: any = {
+    "Content-Type": "multipart/form-data"
+  }
 
   if (authToken) {
     // tslint:disable-next-line no-string-literal
@@ -147,28 +174,25 @@ export async function requestInteractiveDeposit(
   }
 
   const validateStatus = (status: number) =>
-    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
 
   try {
-    return requestDeposit(deposit, () => {
+    return await requestDeposit(deposit, () => {
       return transferServer.post("/transactions/deposit/interactive", body, {
         headers,
         validateStatus
       })
     })
   } catch (error) {
-    if (error && error.response && error.response.status === 404) {
-      return requestLegacyDeposit(deposit, authToken)
+    if (error && error.response && error.response.status === 400) {
+      throw ResponseError(error.response, deposit.transferServer)
     } else {
       throw error
     }
   }
 }
 
-/**
- * Deposit using the old SEP-6 endpoint
- */
-export async function requestLegacyDeposit(
+async function requestLegacyDeposit(
   deposit: Deposit,
   authToken?: string | null | undefined
 ): Promise<DepositInstructions> {
@@ -181,7 +205,7 @@ export async function requestLegacyDeposit(
   }
 
   const validateStatus = (status: number) =>
-    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
 
   return requestDeposit(deposit, () => {
     return transferServer.get("/deposit", {
@@ -192,33 +216,21 @@ export async function requestLegacyDeposit(
   })
 }
 
-/**
- * Use the old SEP-6 endpoint.
- */
 async function requestDeposit(
   deposit: Deposit,
   sendRequest: () => Promise<AxiosResponse>
 ): Promise<DepositInstructions> {
   const { transferServer } = deposit
-
   const response = await sendRequest()
 
-  if (response.status === 200) {
+  if (isKYCRequired(response)) {
+    return createKYCInstructions(response, transferServer.domain)
+  } else if (response.status === 200) {
     return {
       data: response.data as DepositSuccessResponse,
       type: TransferResultType.ok
     }
-  } else if (response.data && response.data.message) {
-    throw Error(
-      `${transferServer.domain} responded with status code ${
-        response.status
-      }: ${response.data.message}`
-    )
   } else {
-    throw Error(
-      `${transferServer.domain} responded with unexpected status code: ${
-        response.status
-      }`
-    )
+    throw ResponseError(response, deposit.transferServer)
   }
 }

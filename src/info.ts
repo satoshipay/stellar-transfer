@@ -112,6 +112,7 @@ export interface TransferInfoResponse {
 export interface AssetTransferInfo {
   asset: Asset
   deposit: TransferInfoResponse["deposit"][""] | undefined
+  transferServer: TransferServer
   withdraw: TransferInfoResponse["withdraw"][""] | undefined
 }
 
@@ -131,7 +132,10 @@ export async function fetchTransferInfos(
   const assetCodes = dedupe([
     ...Object.keys(response.data.deposit),
     ...Object.keys(response.data.withdraw)
-  ])
+  ]).filter(
+    // TEMPO work-around…
+    assetCode => assetCode !== "transactions"
+  )
 
   const assetInfos = assetCodes.map<AssetTransferInfo>(assetCode => ({
     asset:
@@ -139,6 +143,7 @@ export async function fetchTransferInfos(
       fail(`${transferServer.domain} does not issue asset ${assetCode}.`),
     deposit: response.data.deposit[assetCode],
     endpoints: response.data,
+    transferServer,
     withdraw: response.data.withdraw[assetCode]
   }))
 

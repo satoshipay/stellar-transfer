@@ -1,8 +1,12 @@
 import test from "ava"
+import { Networks } from "stellar-sdk"
 import { openTransferServer } from "../src/index"
 
 test("can initialize a TransferServer", async t => {
-  const transferServer = await openTransferServer("sandbox.anchorusd.com")
+  const transferServer = await openTransferServer(
+    "sandbox.anchorusd.com",
+    Networks.TESTNET
+  )
 
   t.deepEqual(transferServer.assets.map(asset => asset.code), ["USD"])
 

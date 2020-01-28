@@ -1,9 +1,8 @@
 import test from "ava"
-import { Keypair } from "stellar-sdk"
+import { Keypair, Networks } from "stellar-sdk"
 import {
   fetchTransferInfos,
   openTransferServer,
-  requestInteractiveWithdrawal,
   KYCResponseType,
   TransferResultType,
   Withdrawal
@@ -12,7 +11,10 @@ import {
 test("interactive withdrawal works", async t => {
   const keypair = Keypair.random()
 
-  const transferServer = await openTransferServer("sandbox.anchorusd.com")
+  const transferServer = await openTransferServer(
+    "sandbox.anchorusd.com",
+    Networks.TESTNET
+  )
   const infos = await fetchTransferInfos(transferServer)
   const asset = infos.withdrawableAssets.find(asset => asset.code === "USD")!
 
@@ -20,7 +22,7 @@ test("interactive withdrawal works", async t => {
     account: keypair.publicKey(),
     email_address: "test-withdrawal@solarwallet.io"
   })
-  const instructions = await requestInteractiveWithdrawal(withdrawal)
+  const instructions = await withdrawal.interactive()
 
   t.is(instructions.type, TransferResultType.kyc)
   t.is((instructions as any).subtype, KYCResponseType.interactive)

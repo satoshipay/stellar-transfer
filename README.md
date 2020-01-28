@@ -31,13 +31,18 @@ import {
   fetchTransferInfos,
   TransferServer
 } from "@satoshipay/stellar-transfer"
+import { Networks } from "stellar-sdk"
 
-const transferServer = await openTransferServer("www.anchorusd.com", {
-  // Optional
-  lang: "en",
-  wallet_name: "Demo wallet",
-  wallet_version: "1.2.3"
-})
+const transferServer = await openTransferServer(
+  "www.anchorusd.com",
+  Networks.TESTNET,
+  {
+    // Optional
+    lang: "en",
+    wallet_name: "Demo wallet",
+    wallet_version: "1.2.3"
+  }
+)
 
 const transferInfos = await fetchTransferInfos(transferServer)
 const { depositableAssets, withdrawableAssets } = transferInfos
@@ -59,15 +64,18 @@ console.log(
 ```ts
 import {
   openTransferServer,
-  requestLegacyWithdrawal,
   KYCResponseType,
   TransferResultType,
   TransferServer,
   Withdrawal,
   WithdrawalType
 } from "@satoshipay/stellar-transfer"
+import { Networks } from "stellar-sdk"
 
-const transferServer = await openTransferServer("www.anchorusd.com")
+const transferServer = await openTransferServer(
+  "www.anchorusd.com",
+  Networks.TESTNET
+)
 const transferInfos = await fetchTransferInfos(transferServer)
 
 const { withdrawableAssets } = transferInfos
@@ -80,9 +88,11 @@ const withdrawal = Withdrawal(transferServer, assetToWithdraw, {
   dest_extra: "NOLADEXYZ"
 })
 
-const instructions = await requestLegacyWithdrawal(
-  withdrawal,
-  /* Depends on anchor if authentication is necessary */
+const instructions = await withdrawal.interactive(
+  /*
+   * SEP-10 auth might be necessary or not, depending on anchor.
+   * Check `authentication_required` in info response.
+   */
   sep10AuthToken
 )
 
