@@ -2,9 +2,9 @@ import { AxiosResponse } from "axios"
 import FormData from "form-data"
 import { Asset } from "stellar-sdk"
 import { ResponseError } from "./errors"
+import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
 import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
-import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
 
 export interface DepositSuccessResponse {
   /**
