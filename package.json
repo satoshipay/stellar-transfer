@@ -1,7 +1,7 @@
 {
   "name": "@satoshipay/stellar-transfer",
   "version": "0.0.0",
-  "description": "Stellar SEP-6 / SEP-24 implementation",
+  "description": "Stellar SEP-24 client implementation",
   "author": "SatoshiPay Ltd (https://satoshipay.io/)",
   "license": "MIT",
   "main": "dist/index.js",
