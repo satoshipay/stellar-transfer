@@ -8,7 +8,10 @@ export function ResponseError(
   const isJsonResponse =
     response.headers["content-type"] &&
     /json/.test(response.headers["content-type"])
-  const message = isJsonResponse && response.data && response.data.error
+  const message =
+    isJsonResponse &&
+    response.data &&
+    (response.data.error || response.data.message)
   return Error(
     message
       ? `Request to ${transferServer.domain} failed: ${message}`
