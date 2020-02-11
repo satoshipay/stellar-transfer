@@ -184,10 +184,12 @@ async function requestInteractiveDeposit(
       })
     })
   } catch (error) {
-    if (error && error.response && error.response.status === 400) {
+    if (error && error.response && error.response.status === 404) {
+      return requestLegacyDeposit(deposit, authToken)
+    } else if (error && error.response) {
       throw ResponseError(error.response, deposit.transferServer)
     } else {
-      throw error
+      return requestLegacyDeposit(deposit, authToken)
     }
   }
 }
