@@ -1,27 +1,15 @@
 import test from "ava"
-import { TransferServer } from "../src/index"
+import { Networks } from "stellar-sdk"
+import { openTransferServer } from "../src/index"
 
-test("fetchTransferServerURL() can fetch the AnchorUSD transfer server", async t => {
-  const transferServer = TransferServer("https://api.anchorusd.com/transfer/")
-  const transferInfo = await transferServer.fetchInfo()
+test("can initialize a TransferServer", async t => {
+  const transferServer = await openTransferServer(
+    "sandbox.anchorusd.com",
+    Networks.TESTNET
+  )
 
-  t.true(transferInfo && typeof transferInfo === "object")
-  t.true(
-    "deposit" in transferInfo,
-    `Expected key "deposit" to be present in transfer info:\n${JSON.stringify(
-      transferInfo,
-      null,
-      2
-    )}`
-  )
-  t.true(
-    "withdraw" in transferInfo,
-    `Expected key "withdraw" to be present in transfer info:\n${JSON.stringify(
-      transferInfo,
-      null,
-      2
-    )}`
-  )
-  t.true("USD" in transferInfo.deposit)
-  t.true("USD" in transferInfo.withdraw)
+  t.deepEqual(transferServer.assets.map(asset => asset.code), ["USD"])
+
+  const response = await transferServer.get("/info")
+  t.deepEqual(Object.keys(response.data.withdraw), ["USD"])
 })

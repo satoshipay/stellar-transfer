@@ -1,17 +1,15 @@
-# @satoshipay/stellar-sep-6
+# @satoshipay/stellar-transfer
 
-[Stellar Ecosystem Proposal 6 - "Anchor/Client interoperability"](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0006.md) client SDK, allowing Stellar wallets to withdraw or deposit third-party fiat or crypto assets like USD, EURT, BTC, ETH, ...
+[Stellar Ecosystem Proposal 24 - "Anchor/Client interoperability"](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md) client SDK, allowing Stellar wallets to withdraw or deposit third-party fiat or crypto assets like USD, EURT, BTC, ETH, ...
 
 That means that users can send EURT to the anchor, requesting a payout in fiat EUR to their SEPA account via bank transfer, for instance.
-
-**Note: This package is still considered experimental. Breaking changes should be expected.**
 
 ## Installation
 
 ```
-npm install @satoshipay/stellar-sep-6
+npm install @satoshipay/stellar-transfer
 # or with yarn:
-yarn add @satoshipay/stellar-sep-6
+yarn add @satoshipay/stellar-transfer
 ```
 
 ## Concepts
@@ -23,62 +21,106 @@ yarn add @satoshipay/stellar-sep-6
 
 ## Usage
 
-### Look up an anchor's transfer server
-
-```ts
-import { locateTransferServer } from "@satoshipay/stellar-sep-6"
-import { Server } from "stellar-sdk"
-
-const transferServerURL: string | null = await locateTransferServer(
-  "www.anchorusd.com"
-)
-```
-
 ### Fetch transfer server metadata
 
 ```ts
-import { TransferServer } from "@satoshipay/stellar-sep-6"
+import {
+  openTransferServer,
+  fetchTransferInfos,
+  TransferServer
+} from "@satoshipay/stellar-transfer"
+import { Networks } from "stellar-sdk"
 
-const transferServer = TransferServer(transferServerURL)
-const info = await transferServer.fetchInfo()
+const transferServer = await openTransferServer(
+  "www.anchorusd.com",
+  Networks.TESTNET,
+  {
+    // Optional
+    lang: "en",
+    wallet_name: "Demo wallet",
+    wallet_version: "1.2.3"
+  }
+)
+
+const transferInfos = await fetchTransferInfos(transferServer)
+const { depositableAssets, withdrawableAssets } = transferInfos
+
+console.log(
+  `Depositable assets: ${depositableAssets
+    .map(asset => asset.getCode())
+    .join(", ")}`
+)
+console.log(
+  `Withdrawable assets: ${withdrawableAssets
+    .map(asset => asset.getCode())
+    .join(", ")}`
+)
 ```
 
 ### Request a withdrawal
 
 ```ts
-import { withdraw, TransferServer } from "@satoshipay/stellar-sep-6"
-import { Keypair } from "stellar-sdk"
+import {
+  openTransferServer,
+  KYCResponseType,
+  TransferResultType,
+  TransferServer,
+  Withdrawal,
+  WithdrawalType
+} from "@satoshipay/stellar-transfer"
+import { Networks } from "stellar-sdk"
 
-const myKeypair = Keypair.fromSecret("S...")
-const transferServer = TransferServer(transferServerURL)
+const transferServer = await openTransferServer(
+  "www.anchorusd.com",
+  Networks.TESTNET
+)
+const transferInfos = await fetchTransferInfos(transferServer)
 
-const result = await withdraw(transferServer, "bank_account", "EURT", {
-  account: myKeypair.publicKey(),
+const { withdrawableAssets } = transferInfos
+const assetToWithdraw = withdrawableAssets.find(asset => asset.code === "USD")
 
-  // The `fetchInfo()` result describes what needs to be passed here
+const withdrawal = Withdrawal(transferServer, assetToWithdraw, {
+  // Optional if using interactive withdrawal (SEP-6 / SEP-24, not SEP-26)
+  type: WithdrawalType.bankAccount,
   dest: "DE00 1234 5678 9012 3456 00",
   dest_extra: "NOLADEXYZ"
 })
 
-if (result.type === "success") {
-  // `result.data` contains the information where and how to send the tokens
-  // to initiate the withdrawal...
+const instructions = await withdrawal.interactive(
+  /*
+   * SEP-10 auth might be necessary or not, depending on anchor.
+   * Check `authentication_required` in info response.
+   */
+  sep10AuthToken
+)
+
+if (instructions.type === TransferResultType.ok) {
+  // `instructions.data` contains the information where and how to send the tokens
+  // to conduct the withdrawal
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "interactive_customer_info_needed"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.interactive
 ) {
-  // Redirect to anchor's KYC page...
+  // Open interactive KYC page at `instructions.data.url`
+  // Use `instructions.data.id` to query the withdrawal transaction status
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "non_interactive_customer_info_needed"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.nonInteractive
 ) {
-  // Request KYC data from the user in our app, then send to anchor...
+  // SEP-12 data submission
 } else if (
-  result.type === "kyc" &&
-  result.data.type === "customer_info_status"
+  instructions.type === TransferResultType.kyc &&
+  instructions.subtype === KYCResponseType.status
 ) {
-  // `result.data.status` will be "pending" or "denied"
-  // If the KYC succeeded, the anchor will not send this response, but `result.type = "success"`
+  if (instructions.data.status === "pending") {
+    // KYC data is being reviewed – poll the withdrawal transaction status until it changes, then proceed
+  } else if (instructions.data.status === "denied") {
+    throw Error(
+      `KYC has failed. Get more details here: ${
+        instructions.data.more_info_url
+      }`
+    )
+  }
 }
 ```
 
@@ -89,7 +131,7 @@ import {
   fetchAssetTransferInfos,
   fetchTransferServers,
   TransferInfo
-} from "@satoshipay/stellar-sep-6"
+} from "@satoshipay/stellar-transfer"
 import { Asset, Server } from "stellar-sdk"
 
 const assets = [

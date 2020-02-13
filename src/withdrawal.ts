@@ -1,38 +1,17 @@
-import axios from "axios"
+import { AxiosResponse } from "axios"
+import FormData from "form-data"
+import {
+  Asset,
+  Memo,
+  Operation,
+  OperationOptions,
+  Transaction,
+  TransactionBuilder
+} from "stellar-sdk"
+import { ResponseError } from "./errors"
+import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
+import { TransferResultType } from "./result"
 import { TransferServer } from "./transfer-server"
-import { joinURL } from "./util"
-
-export interface WithdrawalKYCInteractiveResponse {
-  /** The anchor's internal ID for this deposit / withdrawal request. Can be passed to the `/transaction` endpoint to check status of the request. */
-  id?: string
-  /**
-   * Flag indicating that depositing is also handled in the anchor's interactive customer info flow.
-   * The wallet need not make additional requests to /deposit to complete the deposit.
-   * Defaults to false. Only relevant for responses to /deposit requests.
-   */
-  interactive_deposit?: boolean
-  /** URL hosted by the anchor. The wallet should show this URL to the user either as a popup or an iframe. */
-  url: string
-  type: "interactive_customer_info_needed"
-}
-
-export interface WithdrawalKYCNonInteractiveResponse {
-  /** A list of field names that need to be transmitted via SEP-12 for the deposit to proceed. */
-  fields: string[]
-  type: "non_interactive_customer_info_needed"
-}
-
-export interface WithdrawalKYCStatusResponse<
-  Status extends "pending" | "denied" = "pending" | "denied"
-> {
-  /** Estimated number of seconds until the deposit status will update. */
-  eta?: number
-  /** A URL the user can visit if they want more information about their account / status. */
-  more_info_url?: string
-  /** Status of customer information processing. */
-  status: Status
-  type: "customer_info_status"
-}
 
 export interface WithdrawalSuccessResponse {
   /** The account the user should send its token back to. */
@@ -60,13 +39,28 @@ export interface WithdrawalSuccessResponse {
   fee_percent?: number
 
   /** Any additional data needed as an input for this withdraw, example: Bank Name */
-  extra_info?: any
+  extra_info?: {
+    message?: string
+    [key: string]: any
+  }
 }
 
-export type WithdrawalKYCResponse =
-  | WithdrawalKYCInteractiveResponse
-  | WithdrawalKYCNonInteractiveResponse
-  | WithdrawalKYCStatusResponse
+export interface WithdrawalInstructionsSuccess {
+  data: WithdrawalSuccessResponse
+  type: TransferResultType.ok
+}
+
+export type WithdrawalInstructions =
+  | WithdrawalInstructionsSuccess
+  | KYCInstructions
+
+export enum WithdrawalType {
+  bankAccount = "bank_account",
+  cash = "cash",
+  crypto = "crypto",
+  mobile = "mobile",
+  billPayment = "bill_payment"
+}
 
 export interface WithdrawalOptions {
   /**
@@ -74,20 +68,30 @@ export interface WithdrawalOptions {
    * This is only needed if the anchor requires KYC information for withdrawal.
    * The anchor can use account to look up the user's KYC information.
    */
-  account: string
+  account?: string
+
+  /**
+   * Code of the asset the user wants to withdraw. This must match the asset code issued
+   * by the anchor. Ex if a user withdraws MyBTC tokens and receives BTC, the asset_code
+   * must be MyBTC.
+   */
+  asset_code: string
 
   /**
    * The account that the user wants to withdraw their funds to.
    * This can be a crypto account, a bank account number, IBAN, mobile number, or email address.
    */
-  dest: string
+  dest?: string
 
   /**
    * Extra information to specify withdrawal location.
    * For crypto it may be a memo in addition to the dest address.
    * It can also be a routing number for a bank, a BIC, or the name of a partner handling the withdrawal.
    */
-  dest_extra: string
+  dest_extra?: string
+
+  /** Defaults to `en`. Language code specified using ISO 639-1. `error` fields in the response should be in this language. */
+  lang?: string
 
   /**
    * A wallet will send this to uniquely identify a user if the wallet has multiple users sharing one Stellar account.
@@ -98,76 +102,194 @@ export interface WithdrawalOptions {
   /** Type of memo. One of text, id or hash */
   memo_type?: "hash" | "id" | "text"
 
+  /**
+   * Type of withdrawal. Can be: crypto, bank_account, cash, mobile, bill_payment or other custom
+   * values. Optional if the anchor will respond that interactive customer information is needed.
+   */
+  type?: WithdrawalType | string
+
   /** In communications / pages about the withdrawal, anchor should display the wallet name to the user to explain where funds are coming from. */
   wallet_name?: string
 
   /** Anchor can show this to the user when referencing the wallet involved in the withdrawal (ex. in the anchor's transaction history) */
   wallet_url?: string
+
+  /** The anchor might support custom fields. */
+  [customField: string]: string | undefined
 }
 
-export interface WithdrawalRequestSuccess {
-  data: WithdrawalSuccessResponse
-  type: "success"
+export interface Withdrawal {
+  asset: Asset
+  fields: WithdrawalOptions
+  transferServer: TransferServer
+
+  /**
+   * Withdraw using the SEP-24 endpoint, redirecting to anchor website for KYC
+   */
+  interactive(
+    authToken?: string | null | undefined
+  ): Promise<WithdrawalInstructions>
+
+  /**
+   * Withdraw using the old SEP-6 endpoint
+   */
+  legacy(authToken?: string | null | undefined): Promise<WithdrawalInstructions>
 }
 
-export interface WithdrawalRequestKYC {
-  data:
-    | WithdrawalKYCInteractiveResponse
-    | WithdrawalKYCNonInteractiveResponse
-    | WithdrawalKYCStatusResponse
-  type: "kyc"
-}
-
-export enum WithdrawalType {
-  bankAccount = "bank_account",
-  cash = "cash",
-  crypto = "crypto",
-  mobile = "mobile",
-  billPayment = "bill_payment"
-}
-
-export async function withdraw(
+export function Withdrawal(
   transferServer: TransferServer,
-  type: WithdrawalType | string,
-  assetCode: string,
-  authToken: string | null | undefined,
-  options: WithdrawalOptions
-): Promise<WithdrawalRequestSuccess | WithdrawalRequestKYC> {
-  const headers: any = {}
-  const params = {
-    ...options,
-    type,
-    asset_code: assetCode
+  asset: Asset,
+  fields: Omit<WithdrawalOptions, "asset_code"> & Record<string, string> = {}
+): Withdrawal {
+  if (asset.isNative()) {
+    throw Error(
+      `Cannot withdraw lumens, but only assets issued by ${
+        transferServer.domain
+      }.`
+    )
+  }
+  const withdrawal = {
+    asset,
+    fields: {
+      lang: transferServer.options.lang,
+      wallet_name: transferServer.options.walletName,
+      wallet_url: transferServer.options.walletURL,
+      ...fields,
+      asset_code: asset.getCode()
+    },
+    interactive(
+      authToken?: string | null | undefined
+    ): Promise<WithdrawalInstructions> {
+      return requestInteractiveWithdrawal(withdrawal, authToken)
+    },
+    legacy(
+      authToken?: string | null | undefined
+    ): Promise<WithdrawalInstructions> {
+      return requestLegacyWithdrawal(withdrawal, authToken)
+    },
+    transferServer
+  }
+  return withdrawal
+}
+
+async function requestInteractiveWithdrawal(
+  withdrawal: Withdrawal,
+  authToken?: string | null | undefined
+): Promise<WithdrawalInstructions> {
+  const { fields, transferServer } = withdrawal
+  const body = new FormData()
+  ;(Object.keys(fields) as Array<keyof typeof fields>).forEach(fieldName => {
+    if (typeof fields[fieldName] !== "undefined") {
+      body.append(fieldName as string, fields[fieldName])
+    }
+  })
+
+  const headers: any = {
+    "Content-Type": "multipart/form-data"
   }
 
   if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`
+    // tslint:disable-next-line no-string-literal
+    headers["Authorization"] = `Bearer ${authToken}`
   }
 
-  const url = joinURL(transferServer.url, "/withdraw")
   const validateStatus = (status: number) =>
-    status === 200 || status === 201 || status === 403 // 201 is a TEMPO fix
-  const response = await axios(url, { headers, params, validateStatus })
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
 
-  if (response.status === 200) {
+  try {
+    return await requestWithdrawal(withdrawal, () => {
+      return transferServer.post("/transactions/withdraw/interactive", body, {
+        headers,
+        validateStatus
+      })
+    })
+  } catch (error) {
+    if (error && error.response && error.response.status === 404) {
+      return requestLegacyWithdrawal(withdrawal, authToken)
+    } else if (error && error.response) {
+      throw ResponseError(error.response, withdrawal.transferServer)
+    } else {
+      return requestLegacyWithdrawal(withdrawal, authToken)
+    }
+  }
+}
+
+async function requestLegacyWithdrawal(
+  withdrawal: Withdrawal,
+  authToken?: string | null | undefined
+): Promise<WithdrawalInstructions> {
+  const { fields, transferServer } = withdrawal
+  const headers: any = {}
+
+  if (authToken) {
+    // tslint:disable-next-line no-string-literal
+    headers["Authorization"] = `Bearer ${authToken}`
+  }
+
+  const validateStatus = (status: number) =>
+    status === 200 || status === 201 || status === 400 || status === 403 // 201 is a TEMPO fix
+
+  return requestWithdrawal(withdrawal, () =>
+    transferServer.get("/withdraw", {
+      headers,
+      params: fields,
+      validateStatus
+    })
+  )
+}
+
+async function requestWithdrawal(
+  withdrawal: Withdrawal,
+  sendRequest: () => Promise<AxiosResponse>
+): Promise<WithdrawalInstructions> {
+  const { transferServer } = withdrawal
+  const response = await sendRequest()
+
+  if (isKYCRequired(response)) {
+    return createKYCInstructions(response, transferServer.domain)
+  } else if (response.status === 200) {
     return {
       data: response.data as WithdrawalSuccessResponse,
-      type: "success"
+      type: TransferResultType.ok
     }
-  } else if (response.status === 403) {
-    return {
-      data: response.data as WithdrawalKYCResponse,
-      type: "kyc"
-    }
-  } else if (response.data && response.data.message) {
-    throw Error(
-      `Anchor responded with status code ${response.status}: ${
-        response.data.message
-      }`
-    )
   } else {
+    throw ResponseError(response, withdrawal.transferServer)
+  }
+}
+
+/**
+ * @returns An unsigned transaction containing a payment to conduct the actual withdrawal.
+ */
+export function createWithdrawalPayment(
+  response: WithdrawalInstructionsSuccess,
+  builder: TransactionBuilder,
+  asset: Asset,
+  amount: OperationOptions.Payment["amount"],
+  options: {
+    sourceAccountID?: string
+  } = {}
+): Transaction {
+  // TODO: Support path payments
+  builder.addOperation(
+    Operation.payment({
+      amount,
+      asset,
+      destination: response.data.account_id,
+      source: options.sourceAccountID
+    })
+  )
+
+  if (response.data.memo_type === "hash" && response.data.memo) {
+    builder.addMemo(Memo.hash(response.data.memo))
+  } else if (response.data.memo_type === "id" && response.data.memo) {
+    builder.addMemo(Memo.id(response.data.memo))
+  } else if (response.data.memo_type === "text" && response.data.memo) {
+    builder.addMemo(Memo.text(response.data.memo))
+  } else if (response.data.memo) {
     throw Error(
-      `Anchor responded with unexpected status code: ${response.status}`
+      `Anchor requires a memo on the withdrawal transaction, but did not specify a valid memo type.`
     )
   }
+
+  return builder.build()
 }
