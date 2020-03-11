@@ -30,4 +30,5 @@ export type StellarTomlCurrency = Partial<{
 export type StellarToml = Partial<{
   CURRENCIES: StellarTomlCurrency[]
   TRANSFER_SERVER: string
+  TRANSFER_SERVER_SEP0024: string
 }>
