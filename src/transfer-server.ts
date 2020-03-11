@@ -16,7 +16,11 @@ function fail(message: string): never {
 }
 
 function getTransferServerURL(stellarTomlData: StellarToml): string | null {
-  return stellarTomlData.TRANSFER_SERVER || null
+  return (
+    stellarTomlData.TRANSFER_SERVER_SEP0024 ||
+    stellarTomlData.TRANSFER_SERVER ||
+    null
+  )
 }
 
 export function TransferServer(
