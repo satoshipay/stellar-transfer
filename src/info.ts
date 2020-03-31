@@ -137,15 +137,21 @@ export async function fetchTransferInfos(
     assetCode => assetCode !== "transactions"
   )
 
-  const assetInfos = assetCodes.map<AssetTransferInfo>(assetCode => ({
-    asset:
-      transferServer.assets.find(asset => asset.code === assetCode) ||
-      fail(`${transferServer.domain} does not issue asset ${assetCode}.`),
-    deposit: response.data.deposit[assetCode],
-    endpoints: response.data,
-    transferServer,
-    withdraw: response.data.withdraw[assetCode]
-  }))
+  const assetInfos = assetCodes
+    // Filter out assets that the transfer server lists, but are not in
+    // the stellar.toml. Prevent crashes on partially inconsistent data.
+    .filter(assetCode =>
+      transferServer.assets.some(asset => asset.code === assetCode)
+    )
+    .map<AssetTransferInfo>(assetCode => ({
+      asset:
+        transferServer.assets.find(asset => asset.code === assetCode) ||
+        fail(`${transferServer.domain} does not issue asset ${assetCode}.`),
+      deposit: response.data.deposit[assetCode],
+      endpoints: response.data,
+      transferServer,
+      withdraw: response.data.withdraw[assetCode]
+    }))
 
   return {
     assets: assetInfos,
