@@ -1,5 +1,5 @@
 import BigNumber from "big.js"
-import { Asset } from "stellar-sdk"
+import { Asset } from "stellar-base"
 import { TransferServer } from "./transfer-server"
 import { WithdrawalType } from "./withdrawal"
 
@@ -18,7 +18,15 @@ export async function fetchFee(
   asset: Asset,
   amount: BigNumber | string | number
 ): Promise<FeeResponse> {
-  const response = await transferServer.get<FeeResponse>("/fee", {
+  // const response = await transferServer.get<FeeResponse>("/fee", {
+  //   params: {
+  //     operation,
+  //     type,
+  //     asset_code: asset.code,
+  //     amount: String(amount)
+  //   }
+  // })
+  const response = await transferServer.get("/fee", {
     params: {
       operation,
       type,
@@ -26,5 +34,7 @@ export async function fetchFee(
       amount: String(amount)
     }
   })
-  return response.data
+  const data: any = response.json();
+
+  return data
 }

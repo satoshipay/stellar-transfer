@@ -1,6 +1,6 @@
 {
-  "name": "@satoshipay/stellar-transfer",
-  "version": "0.0.0",
+  "name": "@hacksur/stellar-transfer",
+  "version": "0.0.1",
   "description": "Stellar SEP-24 client implementation",
   "author": "SatoshiPay Ltd (https://satoshipay.io/)",
   "license": "MIT",
@@ -8,6 +8,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "dev": "tsc -w",
     "lint": "tslint --project .",
     "precommit": "lint-staged",
     "prepare": "npm run build",
@@ -17,27 +18,30 @@
     "posttest": "npm run lint"
   },
   "peerDependencies": {
-    "stellar-sdk": ">= 3.0.0"
+    "stellar-base": "latest"
   },
   "dependencies": {
-    "@types/big.js": "^4.0.5",
-    "axios": "^0.21.1",
-    "big.js": "^5.2.2",
-    "debug": "^4.1.1",
-    "form-data": "^3.0.0"
+    "@types/big.js": "latest",
+    "big.js": "latest",
+    "debug": "latest",
+    "form-data": "latest"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.2",
-    "ava": "^1.2.1",
-    "husky": "^1.3.1",
-    "lint-staged": "^8.1.4",
-    "prettier": "^1.16.4",
-    "stellar-sdk": "^3.1.2",
-    "tap-xunit": "^2.3.0",
-    "ts-node": "^8.0.2",
-    "tslint": "^5.12.1",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.7.5"
+    "@cloudflare/workers-types": "latest",
+    "@types/debug": "latest",
+    "ava": "latest",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "lodash": "^4.17.21",
+    "miniflare": "^2.7.1",
+    "prettier": "latest",
+    "stellar-base": "latest",
+    "tap-xunit": "latest",
+    "toml": "^3.0.0",
+    "ts-node": "latest",
+    "tslint": "latest",
+    "tslint-config-prettier": "latest",
+    "typescript": "latest"
   },
   "ava": {
     "compileEnhancements": false,

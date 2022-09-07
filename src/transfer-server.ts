@@ -1,13 +1,23 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import { Asset, Networks, Server, StellarTomlResolver } from "stellar-sdk"
+import { Asset, Networks } from "stellar-base"
 import { StellarToml } from "./stellar-toml"
 import { joinURL } from "./util"
+import * as toml from 'toml';
 
 export interface TransferOptions {
   lang?: string
   walletName?: string
   walletURL?: string
 }
+
+// async function loadAccount(publicKey: any) {
+//   try {
+//     const accountInfo = await fetch(`${HORIZON_URL}/accounts/${publicKey}`);
+//     return accountInfo.json();
+//   } catch {
+//     throw new Error(`Unable to fetch account with publicKey ${publicKey}`);
+//   }
+// }
+
 
 export type TransferServer = ReturnType<typeof TransferServer>
 
@@ -46,18 +56,33 @@ export function TransferServer(
     get options() {
       return options
     },
-    async get<T = any>(
+    async get(
       path: string,
-      reqOptions?: AxiosRequestConfig
-    ): Promise<AxiosResponse<T>> {
-      return axios.get(joinURL(serverURL, path), reqOptions)
+      options?: any,
+    ): Promise<Response> {
+      const init = {
+        method: 'GET',
+        headers: {
+          'content-type': 'application/json;charset=UTF-8',
+        },
+        ...options
+      };
+      return await fetch(joinURL(serverURL, path), init);
     },
-    async post<T = any>(
+    async post(
       path: string,
       body: any,
-      reqOptions?: AxiosRequestConfig
-    ): Promise<AxiosResponse<T>> {
-      return axios.post(joinURL(serverURL, path), body, reqOptions)
+      options?: any
+    ): Promise<Response> {
+      const init = {
+        body: JSON.stringify(body),
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json;charset=UTF-8',
+        },
+        ...options
+      };
+      return await fetch(joinURL(serverURL, path), init);
     }
   }
 }
@@ -67,7 +92,9 @@ export async function openTransferServer(
   network: Networks,
   options?: TransferOptions
 ) {
-  const stellarTomlData = await StellarTomlResolver.resolve(domain)
+  const response = await fetch(`https://${domain}/.well-known/stellar.toml`)
+  const result = await response.text()
+  const stellarTomlData = toml.parse(result)
   const serverURL =
     getTransferServerURL(stellarTomlData) ||
     fail(`There seems to be no transfer server on ${domain}.`)
@@ -77,9 +104,12 @@ export async function openTransferServer(
 
 export async function locateTransferServer(
   domain: string,
-  options?: StellarTomlResolver.StellarTomlResolveOptions
+  // options?: StellarTomlResolver.StellarTomlResolveOptions
 ): Promise<string | null> {
-  const stellarTomlData = await StellarTomlResolver.resolve(domain, options)
+  const response = await fetch(`https://${domain}/.well-known/stellar.toml`)
+  const result = await response.text()
+  const stellarTomlData = toml.parse(result)
+  // const stellarTomlData = await StellarTomlResolver.resolve(domain, options)
   return getTransferServerURL(stellarTomlData)
 }
 
@@ -104,13 +134,14 @@ export async function resolveTransferServerURL(
     throw Error("Native XLM asset does not have an issuer account.")
   }
 
-  const horizon = new Server(horizonURL)
-  const accountData = await horizon.loadAccount(asset.getIssuer())
-  const homeDomain: string | undefined = (accountData as any).home_domain
-
+  // const horizon = new Server(horizonURL)
+  // const accountData = await horizon.loadAccount(asset.getIssuer())
+  // const homeDomain: string | undefined = (accountData as any).home_domain
+  const homeDomain = 'api.anclap.com'
   if (!homeDomain) {
     return null
   }
 
-  return locateTransferServer(homeDomain)
+  // return locateTransferServer(homeDomain)
+  return null
 }

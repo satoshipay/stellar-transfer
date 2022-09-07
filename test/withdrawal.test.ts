@@ -1,5 +1,5 @@
 import test from "ava"
-import { Keypair, Networks } from "stellar-sdk"
+import { Keypair, Networks } from "stellar-base"
 import {
   fetchTransferInfos,
   openTransferServer,

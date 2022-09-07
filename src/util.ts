@@ -11,3 +11,4 @@ export function joinURL(...fragments: string[]) {
     }
   }, "")
 }
+

@@ -1,4 +1,4 @@
-import { Asset } from "stellar-sdk"
+import { Asset } from "stellar-base"
 import { TransferServer } from "./transfer-server"
 
 const dedupe = <T>(array: T[]): T[] => Array.from(new Set(array))
@@ -126,12 +126,15 @@ export interface TransferServerInfo {
 
 export async function fetchTransferInfos(
   transferServer: TransferServer
-): Promise<TransferServerInfo> {
-  const response = await transferServer.get<TransferInfoResponse>("/info")
+): Promise<TransferServerInfo | null> {
+  // const response = await transferServer.get<TransferInfoResponse>("/info")
+  const response = await transferServer.get("/info")
+  const data: any = await response.json()
+  
 
   const assetCodes = dedupe([
-    ...Object.keys(response.data.deposit),
-    ...Object.keys(response.data.withdraw)
+    ...Object.keys(data.deposit),
+    ...Object.keys(data.withdraw)
   ]).filter(
     // TEMPO work-around…
     assetCode => assetCode !== "transactions"
@@ -147,10 +150,10 @@ export async function fetchTransferInfos(
       asset:
         transferServer.assets.find(asset => asset.code === assetCode) ||
         fail(`${transferServer.domain} does not issue asset ${assetCode}.`),
-      deposit: response.data.deposit[assetCode],
-      endpoints: response.data,
+      deposit: data.deposit[assetCode],
+      endpoints: data,
       transferServer,
-      withdraw: response.data.withdraw[assetCode]
+      withdraw: data.withdraw[assetCode]
     }))
 
   return {
@@ -158,7 +161,7 @@ export async function fetchTransferInfos(
     depositableAssets: assetInfos
       .filter(info => info.deposit)
       .map(info => info.asset),
-    endpoints: response.data,
+    endpoints: data,
     transferServer,
     withdrawableAssets: assetInfos
       .filter(info => info.withdraw)

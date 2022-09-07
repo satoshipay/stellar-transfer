@@ -1,15 +1,18 @@
-# @satoshipay/stellar-transfer
+## SEP 24 SDK for Cloudflare Workers
 
-[Stellar Ecosystem Proposal 24 - "Anchor/Client interoperability"](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md) client SDK, allowing Stellar wallets to withdraw or deposit third-party fiat or crypto assets like USD, EURT, BTC, ETH, ...
 
-That means that users can send EURT to the anchor, requesting a payout in fiat EUR to their SEPA account via bank transfer, for instance.
+[Stellar Ecosystem Proposal 24 - "Anchor/Client interoperability"](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md)
+
+Allows Stellar wallets to withdraw or deposit third-party fiat or crypto assets like USD, EURT, BTC, ETH, ...
+
+Users can send EURT to the anchor, requesting a payout in fiat EUR to their SEPA account via bank transfer, for instance.
 
 ## Installation
 
 ```
-npm install @satoshipay/stellar-transfer
+npm install @hacksur/stellar-transfer
 # or with yarn:
-yarn add @satoshipay/stellar-transfer
+yarn add @hacksur/stellar-transfer
 ```
 
 ## Concepts
@@ -28,7 +31,7 @@ import {
   openTransferServer,
   fetchTransferInfos,
   TransferServer
-} from "@satoshipay/stellar-transfer"
+} from "@hacksur/stellar-transfer"
 import { Networks } from "stellar-sdk"
 
 const transferServer = await openTransferServer(
@@ -67,7 +70,7 @@ import {
   TransferServer,
   Withdrawal,
   WithdrawalType
-} from "@satoshipay/stellar-transfer"
+} from "@hacksur/stellar-transfer"
 import { Networks } from "stellar-sdk"
 
 const transferServer = await openTransferServer(
@@ -131,7 +134,7 @@ import {
   fetchAssetTransferInfos,
   fetchTransferServers,
   TransferInfo
-} from "@satoshipay/stellar-transfer"
+} from "@hacksur/stellar-transfer"
 import { Asset, Server } from "stellar-sdk"
 
 const assets = [

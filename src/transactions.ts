@@ -101,7 +101,8 @@ export async function fetchTransaction(
       [idParamName]: id
     }
   })
-  return response.data
+  const data: any = response.json();
+  return data
 }
 
 export async function fetchTransactions(
@@ -127,5 +128,6 @@ export async function fetchTransactions(
       paging_id: options.pagingId
     }
   })
-  return response.data
+  const data: any = response.json();
+  return data
 }

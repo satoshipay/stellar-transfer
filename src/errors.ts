@@ -1,17 +1,20 @@
-import { AxiosResponse } from "axios"
+// import { AxiosResponse } from "axios"
 import { TransferServer } from "./transfer-server"
 
-export function ResponseError(
-  response: AxiosResponse,
+export async function ResponseError(
+  response: Response,
   transferServer: TransferServer
 ) {
-  const isJsonResponse =
-    response.headers["content-type"] &&
-    /json/.test(response.headers["content-type"])
+  const data: any = await response.json()
+
+  const isJsonResponse = true;
+  // const isJsonResponse =
+  //   response.headers["content-type"] &&
+  //   /json/.test(response.headers["content-type"])
   const message =
     isJsonResponse &&
-    response.data &&
-    (response.data.error || response.data.message)
+    data &&
+    (data.error || data.message)
   return Error(
     message
       ? `Request to ${transferServer.domain} failed: ${message}`

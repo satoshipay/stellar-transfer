@@ -1,4 +1,4 @@
-import { AxiosResponse } from "axios"
+// import { AxiosResponse } from "axios"
 import FormData from "form-data"
 import {
   Asset,
@@ -7,7 +7,7 @@ import {
   OperationOptions,
   Transaction,
   TransactionBuilder
-} from "stellar-sdk"
+} from "stellar-base"
 import { ResponseError } from "./errors"
 import { createKYCInstructions, isKYCRequired, KYCInstructions } from "./kyc"
 import { TransferResultType } from "./result"
@@ -136,6 +136,10 @@ export interface Withdrawal {
   legacy(authToken?: string | null | undefined): Promise<WithdrawalInstructions>
 }
 
+interface ResponseData extends Response {
+  data: any
+}
+
 export function Withdrawal(
   transferServer: TransferServer,
   asset: Asset,
@@ -204,13 +208,14 @@ async function requestInteractiveWithdrawal(
       })
     })
   } catch (error) {
-    if (error && error.response && error.response.status === 404) {
+    console.log('THE ERROR IS', error)
+    // if (error && error.response && error.response.status === 404) {
+    //   return requestLegacyWithdrawal(withdrawal, authToken)
+    // } else if (error && error.response) {
+    //   throw ResponseError(error.response, withdrawal.transferServer)
+    // } else {
       return requestLegacyWithdrawal(withdrawal, authToken)
-    } else if (error && error.response) {
-      throw ResponseError(error.response, withdrawal.transferServer)
-    } else {
-      return requestLegacyWithdrawal(withdrawal, authToken)
-    }
+    // }
   }
 }
 
@@ -240,16 +245,17 @@ async function requestLegacyWithdrawal(
 
 async function requestWithdrawal(
   withdrawal: Withdrawal,
-  sendRequest: () => Promise<AxiosResponse>
+  sendRequest: () => Promise<Response>
 ): Promise<WithdrawalInstructions> {
   const { transferServer } = withdrawal
   const response = await sendRequest()
+  const data: any = await response.json()
 
   if (isKYCRequired(response)) {
     return createKYCInstructions(response, transferServer.domain)
   } else if (response.status === 200) {
     return {
-      data: response.data as WithdrawalSuccessResponse,
+      data: data as WithdrawalSuccessResponse,
       type: TransferResultType.ok
     }
   } else {

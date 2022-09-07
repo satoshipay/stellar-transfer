@@ -1,4 +1,4 @@
-import { AxiosResponse } from "axios"
+// import { AxiosResponse } from "axios"
 import { TransferResultType } from "./result"
 
 export interface KYCInteractiveResponse {
@@ -59,25 +59,29 @@ const kycSubTypes: Record<KYCResponse["type"], KYCResponseType> = {
 }
 
 export function createKYCInstructions(
-  response: AxiosResponse,
+  response: Response,
   domain: string
 ): KYCInstructions {
-  const subtype = kycSubTypes[(response.data as KYCResponse).type]
+  const data: any = response.json();
+
+  const subtype = kycSubTypes[(data as KYCResponse).type]
   if (!subtype) {
     throw Error(
       `${domain} requires KYC, but did not specify valid KYC instructions.`
     )
   }
   return {
-    data: response.data as KYCResponse,
+    data: data as KYCResponse,
     subtype,
     type: TransferResultType.kyc
   }
 }
 
-export function isKYCRequired(response: AxiosResponse) {
+export function isKYCRequired (response: Response) {
+  const data: any = response.json();
+
   return (
     response.status === 403 ||
-    response.data.type === "interactive_customer_info_needed"
+    data.type === "interactive_customer_info_needed"
   )
 }
